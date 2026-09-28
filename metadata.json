@@ -1,0 +1,6 @@
+{
+  "name": "Calculateur Salaire Net Québec - Taux Horaire",
+  "description": "Calculatrice de salaire net horaire et paie aux deux semaines pour le Québec, Canada. Calcul instantané des impôts provinciaux, fédéraux, RRQ, RQAP et AE.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
