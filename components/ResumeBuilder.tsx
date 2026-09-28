@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Language } from '@/lib/i18n';
 import {
   FileText,
@@ -26,6 +26,9 @@ import {
   Check,
   Copy,
   ChevronDown,
+  ChevronUp,
+  Minimize2,
+  Maximize2,
   Layers,
   FileCode,
   RotateCcw,
@@ -72,7 +75,7 @@ export interface EducationItem {
   institution: string;
   location: string;
   year: string;
-  equivalenceStatus?: 'Émise par le MIFI (Québec)' | 'Évaluation WES/ICAS (IRCC)' | 'En cours de traitement' | 'Diplôme canadien';
+  equivalenceStatus?: string;
 }
 
 export interface CertificationItem {
@@ -425,6 +428,27 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccessNotice, setImportSuccessNotice] = useState<string | null>(null);
 
+  // Contrôle de réduction de l'en-tête (Plein écran / Maximiser la vue du document)
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+
+  // Menus déroulants organisés (Navigation simplifiée & UX épurée)
+  const [isPresetsMenuOpen, setIsPresetsMenuOpen] = useState(false);
+  const [isDesignMenuOpen, setIsDesignMenuOpen] = useState(false);
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const headerNavRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (headerNavRef.current && !headerNavRef.current.contains(e.target as Node)) {
+        setIsPresetsMenuOpen(false);
+        setIsDesignMenuOpen(false);
+        setIsToolsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   // Optimisation pour offre d'emploi ciblée (ATS Tailoring & Mots-clés)
   const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
   const [jobCompany, setJobCompany] = useState('');
@@ -434,6 +458,16 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({
   const [optimizationResult, setOptimizationResult] = useState<any | null>(null);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
   const [applySuccessNotice, setApplySuccessNotice] = useState<string | null>(null);
+
+  // Nouvelles options avancées d'optimisation (Source du CV & Choix du modèle/formatage)
+  const [optResumeSource, setOptResumeSource] = useState<'current' | 'custom_text'>('current');
+  const [optCustomCvText, setOptCustomCvText] = useState('');
+  const [optTemplateTheme, setOptTemplateTheme] = useState<'classic' | 'modern' | 'tech' | 'industrial'>('classic');
+  const [optPrimaryColor, setOptPrimaryColor] = useState<string>('#1e40af');
+  const [optFontFamily, setOptFontFamily] = useState<'sans' | 'serif' | 'mono'>('sans');
+  const [optTargetLang, setOptTargetLang] = useState<'fr' | 'en'>('fr');
+  const [optStepStatus, setOptStepStatus] = useState<string | null>(null);
+  const optFileInputRef = useRef<HTMLInputElement>(null);
 
   // -------------------------------------------------------------
   // MOTEUR D'AUDIT ATS & CONFORMITÉ IRCC / QUÉBEC (SCORE 0 - 100)
@@ -882,6 +916,21 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
     }
   };
 
+  // Import de fichier pour l'optimiseur
+  const handleOptTextFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setOptCustomCvText(text);
+        setOptResumeSource('custom_text');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   // Appel API : Analyser & Optimiser pour offre d'emploi ciblée
   const handleRunAiOptimize = async () => {
     if (!jobDescription || jobDescription.trim().length < 20) {
@@ -894,16 +943,52 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
     }
     setIsOptimizing(true);
     setOptimizeError(null);
+    setOptStepStatus(null);
+
     try {
+      let activeResumeData = data;
+
+      // Si l'utilisateur a choisi de charger/coller son propre CV brut dans l'optimiseur
+      if (optResumeSource === 'custom_text' && optCustomCvText.trim().length >= 20) {
+        setOptStepStatus(
+          lang === 'pt'
+            ? 'Passo 1/2: Lendo e estruturando o seu currículo bruto...'
+            : 'Étape 1/2 : Extraction et structuration de votre CV...'
+        );
+        try {
+          const parseRes = await fetch('/api/resume/parse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rawText: optCustomCvText,
+              targetLanguage: optTargetLang,
+            }),
+          });
+          const parseJson = await parseRes.json();
+          if (parseJson.success && parseJson.data) {
+            activeResumeData = parseJson.data;
+            setData(parseJson.data);
+          }
+        } catch (parseErr) {
+          console.warn('Fallback parsing applied:', parseErr);
+        }
+      }
+
+      setOptStepStatus(
+        lang === 'pt'
+          ? 'Passo 2/2: Comparando com a vaga e calibrando o modelo...'
+          : 'Étape 2/2 : Comparaison avec l’offre et calibrage du modèle...'
+      );
+
       const res = await fetch('/api/resume/optimize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          resumeData: data,
+          resumeData: activeResumeData,
           jobDescription,
           companyName: jobCompany,
           jobTitle: jobTargetTitle,
-          targetLanguage: resumeLanguage,
+          targetLanguage: optTargetLang,
         }),
       });
       const json = await res.json();
@@ -915,6 +1000,7 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
       setOptimizeError(err.message || 'Échec de l’analyse d’adéquation pour ce poste.');
     } finally {
       setIsOptimizing(false);
+      setOptStepStatus(null);
     }
   };
 
@@ -941,15 +1027,25 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
     }
 
     setData(updatedData);
+
+    // Appliquer le modèle et formatage choisis par l'utilisateur
+    setTemplateTheme(optTemplateTheme);
+    setColorAccent(optPrimaryColor);
+    setFontFamily(optFontFamily);
+    setResumeLanguage(optTargetLang);
+
+    // Basculer directement en mode prévisualisation plein écran pour voir le résultat formaté !
+    setViewMode('preview');
+
     setApplySuccessNotice(
       lang === 'pt'
-        ? 'Otimizações aplicadas com sucesso ao seu currículo e carta de apresentação!'
-        : 'Optimisations appliquées avec succès à votre CV et lettre de motivation !'
+        ? 'Otimizações aplicadas com sucesso! Exibindo o documento com o modelo selecionado.'
+        : 'Optimisations appliquées avec succès ! Affichage du document avec le modèle sélectionné.'
     );
     setTimeout(() => {
       setApplySuccessNotice(null);
       setIsOptimizeModalOpen(false);
-    }, 1600);
+    }, 1200);
   };
 
   // PALETTES DE COULEURS
@@ -966,221 +1062,498 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
     <div className="space-y-6">
       {/* -------------------------------------------------------------
           HEADER & MASTER CONTROLS BAR (SWITCH EDITOR <-> PREVIEW)
+          SUPPORT COLLAPSE / EXPAND POUR MAXIMISER LA VISUALISATION
       ------------------------------------------------------------- */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Logo & Headline */}
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  {lang === 'pt' ? 'Padrão Guichet-Emplois & IRCC' : 'Standard Guichet-Emplois & IRCC'}
-                </span>
-                <span className="text-xs text-slate-400">·</span>
-                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{lang === 'pt' ? 'Conforme Leis Anti-Biais' : '100% Conforme Anti-Biais'}</span>
-                </span>
-              </div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-0.5">
-                {lang === 'pt'
-                  ? 'Construtor Pro de Currículo & Carta de Apresentação'
-                  : 'Générateur Professionnel de CV & Lettre de Motivation'}
-              </h1>
-            </div>
+      {isHeaderCollapsed ? (
+        <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2 text-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold text-slate-900 text-xs truncate max-w-[180px] sm:max-w-xs">
+              {data.fullName || (lang === 'pt' ? 'Meu Currículo' : 'Mon CV')}
+            </span>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-600 text-xs truncate hidden sm:inline max-w-[150px]">
+              {data.jobTitle || 'Journalier de production'}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+              ATS {auditReport.score}%
+            </span>
           </div>
 
-          {/* MASTER SWITCH BUTTONS (BUILD vs PREVIEW) */}
-          <div className="flex items-center gap-2 shrink-0">
-            {viewMode === 'build' ? (
-              <button
-                type="button"
-                onClick={() => setViewMode('preview')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xs transition-all cursor-pointer active:scale-95 group"
-              >
-                <Eye className="w-4 h-4 text-blue-200 group-hover:scale-110 transition-transform" />
-                <span>{lang === 'pt' ? 'Visualizar CV Pronto ➔' : 'Voir le CV Terminé ➔'}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setViewMode('build')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all cursor-pointer active:scale-95"
-              >
-                <ArrowLeft className="w-4 h-4 text-slate-300" />
-                <span>{lang === 'pt' ? 'Voltar à Edição' : 'Modifier le contenu'}</span>
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setViewMode(viewMode === 'build' ? 'preview' : 'build')}
+              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer active:scale-95"
+            >
+              {viewMode === 'build'
+                ? (lang === 'pt' ? 'Visualizar CV' : 'Voir CV')
+                : (lang === 'pt' ? 'Editar' : 'Modifier')}
+            </button>
 
-            {/* Quick Actions (Print / Plain Text) */}
             <button
               type="button"
               onClick={handlePrintOrPdf}
-              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
-              title="Imprimer / Sauvegarder en PDF"
+              className="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
             >
-              <Printer className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleCopyAsPlainText}
-              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
-              title="Copier en texte brut pour Taleo / Workday"
-            >
-              {copiedTextNotice ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Sub-bar: Document Selector (CV vs Cover Letter), Design Selector & Quick NOC Profiles */}
-        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Document Switcher */}
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setActiveDocument('resume')}
-                className={`px-3 py-1.5 font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeDocument === 'resume'
-                    ? 'bg-white text-blue-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>{lang === 'pt' ? 'Curriculum Vitae' : 'Curriculum Vitae (CV)'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveDocument('cover_letter');
-                  if (viewMode === 'build') setBuilderSection('cover_letter');
-                }}
-                className={`px-3 py-1.5 font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeDocument === 'cover_letter'
-                    ? 'bg-white text-blue-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{lang === 'pt' ? 'Carta de Apresentação' : 'Lettre de Motivation'}</span>
-              </button>
-            </div>
-
-            {/* Design / Gabarit Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-              <Palette className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span className="font-bold text-slate-700">{lang === 'pt' ? 'Modelo / Designer:' : 'Modèle / Design :'}</span>
-              <select
-                value={templateTheme}
-                onChange={(e) => setTemplateTheme(e.target.value as any)}
-                className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 font-bold text-slate-800 text-xs shadow-2xs cursor-pointer focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="classic">
-                  {lang === 'pt' ? '⭐ Clássico Fédéral & Ordens (Padrão RH Canadá/QC - ATS 100%)' : '⭐ Classique Fédéral & Ordres (Standard RH Canada/QC - ATS 100%)'}
-                </option>
-                <option value="modern">
-                  {lang === 'pt' ? 'Québec Moderno (Montréal Pro & Híbrido)' : 'Québec Moderne (Montréal Pro & Hybride)'}
-                </option>
-                <option value="tech">
-                  {lang === 'pt' ? 'Tech, TI & Engenharia (Standard Hub Montréal)' : 'Tech, TI & Ingénierie (Standard Hub Montréal)'}
-                </option>
-                <option value="industrial">
-                  {lang === 'pt' ? 'Operações, Ofícios & Indústria (CNESST / CCQ)' : 'Opérations, Métiers & Industrie (CNESST / CCQ)'}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick NOC Profiles */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-slate-400 font-semibold">{lang === 'pt' ? 'Perfis Rápidos:' : 'Profils Rapides :'}</span>
-            {NOC_LIBRARY.map((preset, idx) => (
-              <button
-                key={preset.nocCode}
-                type="button"
-                onClick={() => handleLoadProfile(idx)}
-                className={`px-2 py-0.5 rounded text-[11px] font-bold border transition-all cursor-pointer ${
-                  selectedNocIndex === idx
-                    ? 'bg-blue-50 text-blue-700 border-blue-300'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {preset.titleFr.split('/')[0]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Pro Tools Bar: Rich Catalog, First Job, Student, AI Importer & ATS Job Tailor */}
-        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Catalog Button */}
-            <button
-              type="button"
-              onClick={() => setIsCatalogOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-blue-300" />
-              <span>{lang === 'pt' ? '📚 Catálogo por Setor & Nível (10 Modelos)' : '📚 Catalogue par Secteur & Niveau (10 Modèles)'}</span>
+              PDF
             </button>
 
-            {/* Direct First Job Button */}
-            <button
-              type="button"
-              onClick={handleLoadFirstJob}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer border ${
-                guidedMode === 'first_job'
-                  ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
-              }`}
-              title={lang === 'pt' ? 'Carregar modelo otimizado para quem busca o 1º emprego sem experiência prévia' : 'Modèle optimisé pour premier emploi sans expérience formelle'}
-            >
-              <span>🌱</span>
-              <span>{lang === 'pt' ? '1º Emprego (0 Exp)' : '1er Emploi (0 Exp)'}</span>
-            </button>
-
-            {/* Direct Student / CO-OP Button */}
-            <button
-              type="button"
-              onClick={handleLoadStudent}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer border ${
-                guidedMode === 'student'
-                  ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
-                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
-              }`}
-              title={lang === 'pt' ? 'Carregar modelo focado em projetos acadêmicos e estágios CO-OP' : 'Modèle axé sur projets académiques et stages CO-OP'}
-            >
-              <span>🎓</span>
-              <span>{lang === 'pt' ? 'Estudante / CO-OP' : 'Étudiant / CO-OP'}</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* AI Resume Importer & Converter */}
-            <button
-              type="button"
-              onClick={() => setIsImportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold transition-all cursor-pointer active:scale-95"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-              <span>{lang === 'pt' ? '📥 Importar & Converter CV (IA)' : '📥 Extraire & Adapter CV (IA)'}</span>
-            </button>
-
-            {/* ATS Job Matcher & Tailor */}
             <button
               type="button"
               onClick={() => setIsOptimizeModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer active:scale-95"
             >
-              <Target className="w-3.5 h-3.5 text-blue-200" />
-              <span>{lang === 'pt' ? '🎯 Otimizar para Vaga (ATS Tailor)' : '🎯 Cibler une Offre (ATS Tailor)'}</span>
+              {lang === 'pt' ? 'Otimizar' : 'Cibler'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsHeaderCollapsed(false)}
+              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
+            >
+              {lang === 'pt' ? 'Expandir' : 'Déplier'}
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <div ref={headerNavRef} className="bg-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-slate-200 shadow-2xs relative">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 text-xs">
+            {/* LEFT SIDE: Dynamic Candidate Info (No static tool titles or descriptions) */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-xs">
+                {data.fullName || (lang === 'pt' ? 'Meu Currículo' : 'Mon CV')}
+              </span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-600 text-xs truncate hidden sm:inline max-w-[180px]">
+                {data.jobTitle || 'Journalier de production'}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                ATS {auditReport.score}%
+              </span>
+            </div>
+
+            {/* RIGHT SIDE: Text-only Compact Buttons & Dropdowns */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Document Switcher: Text only */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setActiveDocument('resume')}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    activeDocument === 'resume'
+                      ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  CV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveDocument('cover_letter');
+                    if (viewMode === 'build') setBuilderSection('cover_letter');
+                  }}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    activeDocument === 'cover_letter'
+                      ? 'bg-white text-blue-700 font-bold shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {lang === 'pt' ? 'Carta' : 'Lettre'}
+                </button>
+              </div>
+
+              {/* Dropdown: Modelos & Perfis (Text only) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPresetsMenuOpen(!isPresetsMenuOpen);
+                    setIsDesignMenuOpen(false);
+                    setIsToolsMenuOpen(false);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                    isPresetsMenuOpen
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {lang === 'pt' ? 'Modelos ▾' : 'Modèles ▾'}
+                </button>
+
+                {isPresetsMenuOpen && (
+                  <div className="absolute right-0 mt-1.5 w-72 bg-white rounded-xl border border-slate-200 shadow-xl p-2 z-50 text-xs">
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400">
+                      {lang === 'pt' ? 'Perfis Prontos' : 'Profils Prêts'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleLoadProfile(0);
+                        setIsPresetsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-blue-50 text-slate-800 hover:text-blue-900 font-medium transition-colors cursor-pointer block"
+                    >
+                      <div className="font-bold text-xs">Henrique Santos (Indústria & Produção)</div>
+                      <div className="text-[10px] text-slate-500">5S, Kaizen, BPF, Palettisation, SENAI</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleLoadFirstJob();
+                        setIsPresetsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-emerald-50 text-slate-800 hover:text-emerald-900 font-medium transition-colors cursor-pointer block"
+                    >
+                      <div className="font-bold text-xs">{lang === 'pt' ? '1º Emprego (0 Exp)' : '1er Emploi (0 Exp)'}</div>
+                      <div className="text-[10px] text-slate-500">Sans expérience formelle</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleLoadStudent();
+                        setIsPresetsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-indigo-50 text-slate-800 hover:text-indigo-900 font-medium transition-colors cursor-pointer block"
+                    >
+                      <div className="font-bold text-xs">{lang === 'pt' ? 'Estudante & CO-OP' : 'Étudiant & CO-OP'}</div>
+                      <div className="text-[10px] text-slate-500">Projets, cours & bénévolat</div>
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCatalogOpen(true);
+                        setIsPresetsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold transition-colors cursor-pointer"
+                    >
+                      {lang === 'pt' ? 'Catálogo Completo (10 Áreas)' : 'Catalogue Complet (10 Métiers)'}
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase text-slate-400">
+                      {lang === 'pt' ? 'Perfis CNP / NOC' : 'Profils CNP / NOC'}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 px-1">
+                      {NOC_LIBRARY.map((preset, idx) => (
+                        <button
+                          key={preset.nocCode}
+                          type="button"
+                          onClick={() => {
+                            handleLoadProfile(idx);
+                            setIsPresetsMenuOpen(false);
+                          }}
+                          className={`text-left px-2 py-1 rounded text-[11px] truncate cursor-pointer ${
+                            selectedNocIndex === idx
+                              ? 'bg-blue-100 text-blue-800 font-bold'
+                              : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {preset.titleFr.split('/')[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Dropdown: Design (Text only) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDesignMenuOpen(!isDesignMenuOpen);
+                    setIsPresetsMenuOpen(false);
+                    setIsToolsMenuOpen(false);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                    isDesignMenuOpen
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {lang === 'pt' ? 'Design ▾' : 'Design ▾'}
+                </button>
+
+                {isDesignMenuOpen && (
+                  <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl border border-slate-200 shadow-xl p-2.5 z-50 text-xs space-y-2.5">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        {lang === 'pt' ? 'Gabarito' : 'Gabarit'}
+                      </label>
+                      <select
+                        value={templateTheme}
+                        onChange={(e) => setTemplateTheme(e.target.value as any)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-800 text-xs cursor-pointer focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="classic">Classique Fédéral (ATS 100%)</option>
+                        <option value="modern">Québec Moderne (Montréal)</option>
+                        <option value="tech">Tech & TI</option>
+                        <option value="industrial">Indústria & Operações</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        {lang === 'pt' ? 'Fonte' : 'Police'}
+                      </label>
+                      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-semibold text-center text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setFontFamily('sans')}
+                          className={`py-0.5 rounded cursor-pointer ${
+                            fontFamily === 'sans' ? 'bg-white text-blue-700 font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          Sans
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFontFamily('serif')}
+                          className={`py-0.5 rounded font-serif cursor-pointer ${
+                            fontFamily === 'serif' ? 'bg-white text-blue-700 font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          Serif
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFontFamily('mono')}
+                          className={`py-0.5 rounded font-mono cursor-pointer ${
+                            fontFamily === 'mono' ? 'bg-white text-blue-700 font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          Mono
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        {lang === 'pt' ? 'Cor' : 'Couleur'}
+                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {COLOR_PALETTES.map((pal) => (
+                          <button
+                            key={pal.hex}
+                            type="button"
+                            onClick={() => setColorAccent(pal.hex)}
+                            className={`w-4 h-4 rounded-full border transition-transform cursor-pointer ${
+                              colorAccent === pal.hex ? 'scale-125 border-slate-900' : 'border-white'
+                            }`}
+                            style={{ backgroundColor: pal.hex }}
+                            title={pal.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        {lang === 'pt' ? 'Idioma do Documento' : 'Langue du Document'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-semibold text-center text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setResumeLanguage('fr')}
+                          className={`py-0.5 rounded cursor-pointer ${
+                            resumeLanguage === 'fr' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          Français (QC)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setResumeLanguage('en')}
+                          className={`py-0.5 rounded cursor-pointer ${
+                            resumeLanguage === 'en' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          English (CA)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                        {lang === 'pt' ? 'Espaçamento' : 'Espacement'}
+                      </label>
+                      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-semibold text-center text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setDensity('compact')}
+                          className={`py-0.5 rounded cursor-pointer ${
+                            density === 'compact' ? 'bg-white text-blue-700 font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          {lang === 'pt' ? 'Compacto' : 'Compact'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDensity('normal')}
+                          className={`py-0.5 rounded cursor-pointer ${
+                            density === 'normal' ? 'bg-white text-blue-700 font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          {lang === 'pt' ? 'Normal' : 'Normal'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDensity('relaxed')}
+                          className={`py-0.5 rounded cursor-pointer ${
+                            density === 'relaxed' ? 'bg-white text-blue-700 font-bold shadow-2xs' : 'text-slate-600'
+                          }`}
+                        >
+                          {lang === 'pt' ? 'Amplo' : 'Aéré'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Optimize Button: Text only, compact */}
+              <button
+                type="button"
+                onClick={() => setIsOptimizeModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer active:scale-95"
+                title={lang === 'pt' ? 'Otimizar para vaga com IA' : 'Optimiser pour une offre'}
+              >
+                {lang === 'pt' ? 'Otimizar Vaga' : 'Cibler Offre'}
+              </button>
+
+              {/* Dropdown: Ações (Text only) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsToolsMenuOpen(!isToolsMenuOpen);
+                    setIsPresetsMenuOpen(false);
+                    setIsDesignMenuOpen(false);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                    isToolsMenuOpen
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {lang === 'pt' ? 'Ações ▾' : 'Actions ▾'}
+                </button>
+
+                {isToolsMenuOpen && (
+                  <div className="absolute right-0 mt-1.5 w-60 bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 z-50 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsImportModalOpen(true);
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-purple-50 text-slate-800 hover:text-purple-900 font-medium transition-colors cursor-pointer block"
+                    >
+                      {lang === 'pt' ? 'Importar CV (IA)' : 'Importer CV (IA)'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePrintOrPdf();
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-50 text-slate-800 font-medium transition-colors cursor-pointer block"
+                    >
+                      {lang === 'pt' ? 'Imprimir / PDF' : 'Imprimer / PDF'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleCopyAsPlainText();
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-50 text-slate-800 font-medium transition-colors cursor-pointer block"
+                    >
+                      {copiedTextNotice
+                        ? (lang === 'pt' ? 'Copiado!' : 'Copié !')
+                        : (lang === 'pt' ? 'Copiar Texto Puro (ATS)' : 'Copier Texte Brut (ATS)')}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleShareLink();
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-50 text-slate-800 font-medium transition-colors cursor-pointer block"
+                    >
+                      {copiedLinkNotice
+                        ? (lang === 'pt' ? 'Link Copiado!' : 'Lien Copié !')
+                        : (lang === 'pt' ? 'Compartilhar Link' : 'Partager le Lien')}
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportJson();
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded text-slate-600 hover:bg-slate-50 cursor-pointer text-[11px] block"
+                    >
+                      {lang === 'pt' ? 'Exportar Backup JSON' : 'Exporter JSON'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded text-slate-600 hover:bg-slate-50 cursor-pointer text-[11px] block"
+                    >
+                      {lang === 'pt' ? 'Restaurar JSON' : 'Charger JSON'}
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleImportJson} accept=".json" className="hidden" />
+                  </div>
+                )}
+              </div>
+
+              {/* View / Edit Mode Switch: Text only */}
+              {viewMode === 'build' ? (
+                <button
+                  type="button"
+                  onClick={() => setViewMode('preview')}
+                  className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer active:scale-95"
+                >
+                  {lang === 'pt' ? 'Visualizar CV' : 'Voir CV'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setViewMode('build')}
+                  className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer active:scale-95"
+                >
+                  {lang === 'pt' ? 'Editar' : 'Modifier'}
+                </button>
+              )}
+
+              {/* Collapse button: Text only */}
+              <button
+                type="button"
+                onClick={() => setIsHeaderCollapsed(true)}
+                className="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-800 font-medium text-xs transition-colors cursor-pointer"
+                title={lang === 'pt' ? 'Recolher barra' : 'Réduire barre'}
+              >
+                {lang === 'pt' ? 'Recolher' : 'Réduire'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =============================================================
           VUE 1 : MODE CONSTRUCTION (BUILDER PLEIN ÉCRAN)
@@ -2454,181 +2827,6 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
       ============================================================= */}
       {viewMode === 'preview' && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
-          {/* Floating Studio Controls Bar */}
-          <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200 shadow-lg flex flex-wrap items-center justify-between gap-3 text-xs">
-            {/* Left Controls: Return to Edit & Document Type */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMode('build')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>{lang === 'pt' ? 'Editar Conteúdo' : 'Modifier le contenu'}</span>
-              </button>
-
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setActiveDocument('resume')}
-                  className={`px-2.5 py-1 rounded font-bold transition-all ${
-                    activeDocument === 'resume' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  CV
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveDocument('cover_letter')}
-                  className={`px-2.5 py-1 rounded font-bold transition-all ${
-                    activeDocument === 'cover_letter' ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  {lang === 'pt' ? 'Carta' : 'Lettre'}
-                </button>
-              </div>
-            </div>
-
-            {/* Middle Controls: Theme, Typography, Color Accent & Language */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              {/* Template Theme */}
-              <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-                <Palette className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="text-slate-700 font-bold text-xs">{lang === 'pt' ? 'Modelo:' : 'Modèle :'}</span>
-                <select
-                  value={templateTheme}
-                  onChange={(e) => setTemplateTheme(e.target.value as any)}
-                  className="px-2 py-0.5 bg-white border border-slate-200 rounded-lg font-bold text-slate-800 text-xs shadow-2xs cursor-pointer focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="classic">
-                    {lang === 'pt' ? '⭐ Clássico Fédéral & Ordens (Padrão RH Canadá/QC - ATS 100%)' : '⭐ Classique Fédéral & Ordres (Standard RH Canada/QC - ATS 100%)'}
-                  </option>
-                  <option value="modern">
-                    {lang === 'pt' ? 'Québec Moderno (Montréal Pro & Híbrido)' : 'Québec Moderne (Montréal Pro & Hybride)'}
-                  </option>
-                  <option value="tech">
-                    {lang === 'pt' ? 'Tech, TI & Engenharia (Standard Hub Montréal)' : 'Tech, TI & Ingénierie (Standard Hub Montréal)'}
-                  </option>
-                  <option value="industrial">
-                    {lang === 'pt' ? 'Operações, Ofícios & Indústria (CNESST / CCQ)' : 'Opérations, Métiers & Industrie (CNESST / CCQ)'}
-                  </option>
-                </select>
-              </div>
-
-              {/* Font Family Selector */}
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setFontFamily('sans')}
-                  className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                    fontFamily === 'sans' ? 'bg-white shadow-2xs text-blue-700' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Police Sans-serif"
-                >
-                  Sans
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFontFamily('serif')}
-                  className={`px-2 py-0.5 rounded font-serif transition-all cursor-pointer ${
-                    fontFamily === 'serif' ? 'bg-white shadow-2xs text-blue-700' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Police Serif (Élégance Classique)"
-                >
-                  Serif
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFontFamily('mono')}
-                  className={`px-2 py-0.5 rounded font-mono transition-all cursor-pointer ${
-                    fontFamily === 'mono' ? 'bg-white shadow-2xs text-blue-700' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Police Monospace (Tech)"
-                >
-                  Mono
-                </button>
-              </div>
-
-              {/* Color Accents */}
-              <div className="flex items-center gap-1">
-                {COLOR_PALETTES.map((pal) => (
-                  <button
-                    key={pal.hex}
-                    type="button"
-                    onClick={() => setColorAccent(pal.hex)}
-                    className={`w-5 h-5 rounded-full border-2 transition-transform cursor-pointer ${
-                      colorAccent === pal.hex ? 'scale-125 border-slate-900 shadow-xs' : 'border-white hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: pal.hex }}
-                    title={pal.name}
-                  />
-                ))}
-              </div>
-
-              {/* Language Output Selector */}
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setResumeLanguage('fr')}
-                  className={`px-2 py-0.5 rounded font-bold text-[11px] cursor-pointer ${
-                    resumeLanguage === 'fr' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  FR
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setResumeLanguage('en')}
-                  className={`px-2 py-0.5 rounded font-bold text-[11px] cursor-pointer ${
-                    resumeLanguage === 'en' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  EN
-                </button>
-              </div>
-            </div>
-
-            {/* Right Controls: Export & Save */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleExportJson}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-                title="Sauvegarder JSON sur votre ordinateur"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-                title="Charger un fichier JSON existant"
-              >
-                <Upload className="w-3.5 h-3.5" />
-              </button>
-              <input type="file" ref={fileInputRef} onChange={handleImportJson} accept=".json" className="hidden" />
-
-              <button
-                type="button"
-                onClick={handleShareLink}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-                title="Partager le lien"
-              >
-                {copiedLinkNotice ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePrintOrPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{lang === 'pt' ? 'Exportar PDF' : 'Télécharger PDF'}</span>
-              </button>
-            </div>
-          </div>
-
           {/* REALISTIC CANADIAN RESUME CANVAS (8.5" x 11" LETTER DIMENSIONS) */}
           <div
             className={`max-w-4xl mx-auto bg-white p-6 sm:p-10 md:p-12 rounded-2xl border border-slate-200 shadow-2xl text-slate-900 transition-all ${
@@ -4100,52 +4298,329 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
             </div>
 
             {/* Content Area */}
-            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
-              {/* Target Job Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    {lang === 'pt' ? 'Nome da Empresa Cobiçada:' : 'Nom de l’Entreprise :'}
-                  </label>
-                  <input
-                    type="text"
-                    value={jobCompany}
-                    onChange={(e) => setJobCompany(e.target.value)}
-                    placeholder="ex: Hydro-Québec, CGI, Desjardins, Bombardier..."
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-slate-900"
-                  />
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+              {/* ETAPA 1: FONTE DO CURRÍCULO DO USUÁRIO */}
+              <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">1</span>
+                    <span>{lang === 'pt' ? 'Currículo do Usuário (Fonte de Leitura)' : 'CV du Candidat (Source de Données)'}</span>
+                  </span>
+
+                  {/* Switch between Current CV in Editor vs Upload/Paste New */}
+                  <div className="flex items-center gap-1 bg-white p-0.5 rounded-xl border border-slate-200 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setOptResumeSource('current')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        optResumeSource === 'current'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {lang === 'pt' ? '📌 Usar CV Atual do Editor' : '📌 Utiliser le CV Actuel'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOptResumeSource('custom_text')}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        optResumeSource === 'custom_text'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {lang === 'pt' ? '📥 Carregar / Colar Outro CV' : '📥 Charger / Coller un CV'}
+                    </button>
+                  </div>
                 </div>
+
+                {optResumeSource === 'current' ? (
+                  /* Preview do currículo atual */
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-slate-900 text-sm">
+                          {data.fullName || (lang === 'pt' ? 'Candidato' : 'Candidat')}
+                        </span>
+                        <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          {data.jobTitle || 'Journalier de production'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        {data.experiences.length} {lang === 'pt' ? 'experiências cadastradas' : 'expériences'} · {data.educations.length} {lang === 'pt' ? 'formações' : 'diplômes'} · {data.technicalSkills.length} {lang === 'pt' ? 'competências técnicas' : 'compétences'}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 self-start sm:self-auto">
+                      ✓ {lang === 'pt' ? 'Pronto para calibrar com a vaga' : 'Prêt pour l’alignement'}
+                    </span>
+                  </div>
+                ) : (
+                  /* Upload ou Colagem de CV novo */
+                  <div className="space-y-2.5 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <p className="text-xs text-slate-600">
+                        {lang === 'pt'
+                          ? 'Faça o upload do seu arquivo de currículo ou cole o texto abaixo. A IA lerá seus dados e adaptará às exigências da vaga.'
+                          : 'Chargez votre fichier ou collez le texte de votre CV brut. L’IA extraira vos données réelles pour les calibrer avec le poste.'}
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          ref={optFileInputRef}
+                          onChange={handleOptTextFileUpload}
+                          accept=".txt,.doc,.docx,.pdf,.json"
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => optFileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs cursor-pointer"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-blue-600" />
+                          <span>{lang === 'pt' ? 'Carregar Arquivo (.txt / .doc)' : 'Charger Fichier'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOptCustomCvText(`Henrique de Oliveira Santos
+Brasileiro – casado - nascido em 23/02/1988
+End: Rua Padre Donizete n° 11 JD. Campestre, Embu – Guaçú SP
+Tel. (11)96507-2483 / (11)95740-6364
+Email: henriqueoliveira248@gmail.com
+Objetivo: Auxiliar de produção / embalagem / abastecimento
+Formação:
+- Ensino médio completo (2009)
+- Leitura e Interpretação de desenho técnico mecânico - SENAI (360hs, 2011)
+- Inspetor de qualidade - SENAI (360hs, 2012)
+Qualificações: Linha de produção, boas práticas de fabricação (BPF), 5S, TPM, KAIZEN, relatórios de produção.
+Experiências:
+- 06/2017 – Atualmente: Sodimac Dicico (Repositor / atendente especialista)
+- 01/2015 – 11/2016: Avon Industrial LTDA (Auxiliar de Produção)
+- 03/2011 – 02/2013: Chris Cintos de Segurança LTDA (Ajudante de produção)
+Cursos: Segurança no trabalho - SENAI (14hs, 2019)`);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-colors cursor-pointer"
+                          title="Inserir texto do currículo do Henrique Santos para demonstração"
+                        >
+                          {lang === 'pt' ? '⭐ Exemplo Henrique Santos' : '⭐ Exemple Henrique'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <textarea
+                      rows={4}
+                      value={optCustomCvText}
+                      onChange={(e) => setOptCustomCvText(e.target.value)}
+                      placeholder={
+                        lang === 'pt'
+                          ? 'Cole aqui o texto do seu currículo em qualquer formato ou idioma (ex: Henrique de Oliveira Santos, experiências, formações no Brasil, etc.)...'
+                          : 'Collez ici le texte brut de votre CV...'
+                      }
+                      className="w-full p-3 text-xs leading-relaxed text-slate-900 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* ETAPA 2: VAGA DE EMPREGO COBIÇADA */}
+              <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">2</span>
+                  <span>{lang === 'pt' ? 'Vaga de Emprego Pretendida' : 'Offre d’Emploi Ciblée'}</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      {lang === 'pt' ? 'Nome da Empresa Cobiçada:' : 'Nom de l’Entreprise :'}
+                    </label>
+                    <input
+                      type="text"
+                      value={jobCompany}
+                      onChange={(e) => setJobCompany(e.target.value)}
+                      placeholder="ex: Biscuits Leclerc, Hydro-Québec, Bombardier, Sodimac..."
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-900 font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      {lang === 'pt' ? 'Título do Cargo na Oferta:' : 'Titre du Poste :'}
+                    </label>
+                    <input
+                      type="text"
+                      value={jobTargetTitle}
+                      onChange={(e) => setJobTargetTitle(e.target.value)}
+                      placeholder="ex: Journalier de production, Opérateur d’emballage, Commis d’entrepôt..."
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-900 font-semibold"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    {lang === 'pt' ? 'Título do Cargo na Oferta:' : 'Titre du Poste :'}
+                    {lang === 'pt' ? 'Descrição / Exigências da Oferta de Emprego:' : 'Description & Exigences de l’Offre d’Emploi :'}
                   </label>
-                  <input
-                    type="text"
-                    value={jobTargetTitle}
-                    onChange={(e) => setJobTargetTitle(e.target.value)}
-                    placeholder="ex: Développeur Full-Stack, Opérateur de machine, Infirmier(ère)..."
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 text-slate-900"
+                  <textarea
+                    rows={4}
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder={
+                      lang === 'pt'
+                        ? 'Cole aqui a descrição completa da vaga do LinkedIn, Indeed, Guichet-Emplois ou site da empresa (responsabilidades, requisitos, máquinas, certificações, etc.)...'
+                        : 'Collez ici les responsabilités et qualifications demandées dans l’offre d’emploi...'
+                    }
+                    className="w-full p-3 text-xs leading-relaxed text-slate-900 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              {/* Job Posting Textarea */}
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {lang === 'pt' ? 'Descrição / Exigências da Oferta de Emprego:' : 'Description & Exigences de l’Offre d’Emploi :'}
-                </label>
-                <textarea
-                  rows={5}
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder={
-                    lang === 'pt'
-                      ? 'Cole aqui a descrição completa da vaga do LinkedIn, Indeed, Job Bank ou do site da empresa (responsabilidades, qualificações requeridas, tecnologias, etc.)...'
-                      : 'Collez ici les responsabilités et qualifications demandées dans l’offre d’emploi...'
-                  }
-                  className="w-full p-3 text-xs leading-relaxed text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500"
-                />
+              {/* ETAPA 3: ESCOLHA DO MODELO & FORMATAÇÃO */}
+              <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">3</span>
+                  <span>{lang === 'pt' ? 'Modelo de Currículo & Formatações Canadenses' : 'Modèle de CV & Formatage Canadien'}</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  {[
+                    {
+                      id: 'classic',
+                      title: 'Classique Fédéral',
+                      desc: 'Padrão RH Canadá/QC 100% ATS',
+                      badge: '⭐ 100% ATS Safe',
+                    },
+                    {
+                      id: 'modern',
+                      title: 'Québec Moderne',
+                      desc: 'Montréal Pro & Layout Híbrido',
+                      badge: '🎨 Design Dinâmico',
+                    },
+                    {
+                      id: 'industrial',
+                      title: 'Indústria & Ofícios',
+                      desc: 'CNESST, BPF, 5S e Fábricas',
+                      badge: '⚙️ Foco em Fábricas',
+                    },
+                    {
+                      id: 'tech',
+                      title: 'Tech & Engenharia',
+                      desc: 'Hub Montréal & Projetos',
+                      badge: '💻 Foco Técnico',
+                    },
+                  ].map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => setOptTemplateTheme(tpl.id as any)}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        optTemplateTheme === tpl.id
+                          ? 'bg-blue-50/80 border-blue-500 shadow-2xs ring-2 ring-blue-500/20'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <span className="text-[10px] font-black text-blue-700 bg-blue-100/60 px-1.5 py-0.5 rounded">
+                        {tpl.badge}
+                      </span>
+                      <span className="font-black text-slate-900 text-xs block mt-1.5">
+                        {tpl.title}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block leading-tight mt-0.5">
+                        {tpl.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sub-opções de Formatação: Cor, Fonte e Idioma */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200/80 text-xs">
+                  {/* Cor de Destaque */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-600 font-bold">{lang === 'pt' ? 'Cor de Destaque:' : 'Couleur :'}</span>
+                    <div className="flex items-center gap-1.5">
+                      {COLOR_PALETTES.map((pal) => (
+                        <button
+                          key={pal.hex}
+                          type="button"
+                          onClick={() => setOptPrimaryColor(pal.hex)}
+                          className={`w-5 h-5 rounded-full border-2 transition-transform cursor-pointer ${
+                            optPrimaryColor === pal.hex ? 'scale-125 border-slate-900 shadow-xs' : 'border-white hover:scale-110'
+                          }`}
+                          style={{ backgroundColor: pal.hex }}
+                          title={pal.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fonte */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-600 font-bold">{lang === 'pt' ? 'Tipografia:' : 'Police :'}</span>
+                    <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setOptFontFamily('sans')}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                          optFontFamily === 'sans' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        Sans
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOptFontFamily('serif')}
+                        className={`px-2 py-0.5 rounded font-serif transition-all cursor-pointer ${
+                          optFontFamily === 'serif' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        Serif
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOptFontFamily('mono')}
+                        className={`px-2 py-0.5 rounded font-mono transition-all cursor-pointer ${
+                          optFontFamily === 'mono' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        Mono
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Idioma de Destino */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-600 font-bold">{lang === 'pt' ? 'Idioma do CV:' : 'Langue :'}</span>
+                    <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setOptTargetLang('fr')}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                          optTargetLang === 'fr' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        Français (QC)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOptTargetLang('en')}
+                        className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                          optTargetLang === 'en' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        English (CA)
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Status do Processamento em Tempo Real */}
+              {optStepStatus && (
+                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center gap-2.5 animate-pulse">
+                  <RefreshCw className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
+                  <span className="font-bold">{optStepStatus}</span>
+                </div>
+              )}
 
               {/* Run Button */}
               <div className="flex justify-end">
@@ -4153,17 +4628,17 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
                   type="button"
                   onClick={handleRunAiOptimize}
                   disabled={isOptimizing || !jobDescription.trim()}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/20 cursor-pointer active:scale-95"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 cursor-pointer active:scale-95 transition-all"
                 >
                   {isOptimizing ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                      <span>{lang === 'pt' ? 'Analisando e Calibrando ATS...' : 'Analyse et ciblage ATS en cours...'}</span>
+                      <span>{optStepStatus || (lang === 'pt' ? 'Otimizando para a vaga...' : 'Optimisation en cours...')}</span>
                     </>
                   ) : (
                     <>
                       <Zap className="w-4 h-4 text-amber-300" />
-                      <span>{lang === 'pt' ? '⚡ Analisar Compatibilidade & Otimizar' : '⚡ Analyser l’Adéquation & Optimiser'}</span>
+                      <span>{lang === 'pt' ? '⚡ Analisar Compatibilidade & Otimizar para esta Vaga' : '⚡ Analyser l’Adéquation & Optimiser'}</span>
                     </>
                   )}
                 </button>
@@ -4282,7 +4757,7 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
                         </button>
                       </div>
                       <p className="text-slate-800 leading-relaxed italic bg-white p-3 rounded-xl border border-slate-200/80">
-                        "{optimizationResult.tailoredSummary}"
+                        &ldquo;{optimizationResult.tailoredSummary}&rdquo;
                       </p>
                     </div>
                   )}
@@ -4304,7 +4779,7 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
                       onClick={handleApplyOptimization}
                       className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95 shrink-0"
                     >
-                      {lang === 'pt' ? '⭐ Aplicar ao meu CV (1 Clique)' : '⭐ Appliquer à mon CV (1 Clic)'}
+                      {lang === 'pt' ? '⭐ Aplicar ao meu CV & Visualizar no Modelo Escolhido ➔' : '⭐ Appliquer & Visualiser avec le Modèle ➔'}
                     </button>
                   </div>
                 </div>
