@@ -24,6 +24,7 @@ import {
   Info,
   Layers,
   Compass,
+  Crown,
 } from 'lucide-react';
 
 export type Article = BlogArticleData;

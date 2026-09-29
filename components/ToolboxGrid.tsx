@@ -33,6 +33,7 @@ export type ToolId =
   | 'compare-jobs'
   | 'canada-provinces'
   | 'resources'
+  | 'guides'
   | 'vacation-holidays'
   | 'rrsp-savings'
   | 'factory-stub'
