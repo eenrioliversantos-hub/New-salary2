@@ -840,14 +840,26 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
 
         {/* 3. iLovePDF-Style Toolbox Grid (All Tools Showcase) */}
         <div id="toolbox-section" className="pt-8 border-t border-slate-200/80">
-          <ToolboxGrid
-            lang={lang}
-            activeTool={activeTool}
-            onSelectTool={handleSelectTool}
-          />
-        </div>
+  <ToolboxGrid
+  lang={lang}
+  activeTool={activeTool}
+  onSelectTool={handleSelectTool}
+  />
+  </div>
 
-        {/* 4. Newsletter & Lead Magnet Callout */}
+  {/* Strategic post-tools offer: high-engagement placement aligned with the tool directory */}
+  <AdBanner
+  section="tools-section"
+  fallbackSection="home-top"
+  format="bottom-wide"
+  lang={lang}
+  onNavigateToMediaKit={() => {
+  handleSelectTool('media-kit');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  }}
+  />
+  
+  {/* 4. Newsletter & Lead Magnet Callout */}
         <div className="pt-2">
           <NewsletterBox lang={lang} variant="banner" />
         </div>

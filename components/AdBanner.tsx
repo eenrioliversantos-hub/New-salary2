@@ -195,7 +195,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   }, [currentFormat, section]);
 
   // Live inventory is intentionally limited to high-intent placements. Product and affiliate offers live in the dedicated hub; B2B inventory remains in the business area.
-  const isCuratedLivePlacement = ['home-top', 'salary-results', 'footer-wide'].includes(section || '') || activeTool === 'partners';
+  const isCuratedLivePlacement = ['home-top', 'salary-results', 'tools-section', 'footer-wide'].includes(section || '') || activeTool === 'partners';
   if (!isPreviewMode && !isCuratedLivePlacement) return null;
 
   // If paused and not preview mode, completely hide
