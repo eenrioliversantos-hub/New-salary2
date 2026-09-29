@@ -390,6 +390,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Rotative Top Ticker Banner State
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [isTickerPaused, setIsTickerPaused] = useState(false);
 
   const banners = [
     {
@@ -422,11 +423,12 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   useEffect(() => {
+    if (isTickerPaused) return;
     const timer = setInterval(() => {
       setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isTickerPaused]);
 
   const navRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -523,7 +525,14 @@ export const Header: React.FC<HeaderProps> = ({
       ref={navRef}
     >
       {/* Rotative Top Ticker Banner */}
-      <div className="w-full bg-slate-900 text-white text-[11px] sm:text-xs font-semibold py-1.5 px-4 flex items-center justify-center gap-3 transition-all relative overflow-hidden border-b border-slate-800">
+      <div
+        className="w-full bg-slate-900 text-white text-[11px] sm:text-xs font-semibold py-1.5 px-4 flex items-center justify-center gap-3 transition-all relative overflow-hidden border-b border-slate-800"
+        onMouseEnter={() => setIsTickerPaused(true)}
+        onMouseLeave={() => setIsTickerPaused(false)}
+        onFocus={() => setIsTickerPaused(true)}
+        onBlur={() => setIsTickerPaused(false)}
+        aria-live="polite"
+      >
         <div className="flex items-center gap-2 justify-center flex-wrap text-center select-none animate-in fade-in duration-200">
           <span>{banners[currentBannerIndex][lang]}</span>
           <button

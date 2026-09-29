@@ -118,9 +118,11 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
   const activeSponsor = useMemo(() => {
     if (isPreviewMode) return adSlot?.customSponsor;
-    // Always prioritize house ads to promote our own products!
+    // House ads keep the funnel focused on PaieNet products unless a slot is previewed by an advertiser.
     return houseAdsSponsor;
   }, [isPreviewMode, adSlot, houseAdsSponsor]);
+
+  const isInternalDestination = Boolean(activeSponsor?.linkUrl?.startsWith('#'));
 
   // Record impression on mount (only in live mode, not preview)
   useEffect(() => {
@@ -255,7 +257,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
     const destinationUrl = normalizeUrl(sponsor.linkUrl);
 
     const handleSponsorClick = (e: React.MouseEvent) => {
-      if (!destinationUrl || destinationUrl === '#') {
+      if (!destinationUrl) {
         e.preventDefault();
         return;
       }
@@ -287,8 +289,8 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
           <a
             href={destinationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            target={isInternalDestination ? undefined : '_blank'}
+            rel={isInternalDestination ? undefined : 'noopener noreferrer'}
             onClick={handleSponsorClick}
             className={`group block w-full p-3 sm:py-2.5 sm:px-5 border rounded-2xl shadow-sm transition-all text-white cursor-pointer ${getThemeClasses(
               sponsor.themeGradient
@@ -354,8 +356,8 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
           <a
             href={destinationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            target={isInternalDestination ? undefined : '_blank'}
+            rel={isInternalDestination ? undefined : 'noopener noreferrer'}
             onClick={handleSponsorClick}
             className={`group block w-full p-5 sm:p-6 border rounded-2xl shadow-sm transition-all text-white space-y-3 cursor-pointer ${getThemeClasses(
               sponsor.themeGradient
@@ -415,8 +417,8 @@ export const AdBanner: React.FC<AdBannerProps> = ({
 
         <a
           href={destinationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+          target={isInternalDestination ? undefined : '_blank'}
+          rel={isInternalDestination ? undefined : 'noopener noreferrer'}
           onClick={handleSponsorClick}
           className={`group block w-full p-4 sm:p-5 border rounded-2xl shadow-sm transition-all text-white cursor-pointer ${getThemeClasses(
             sponsor.themeGradient
