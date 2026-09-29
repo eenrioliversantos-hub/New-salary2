@@ -1366,7 +1366,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden inline-flex items-center justify-center p-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
               aria-expanded={isMobileMenuOpen}
-              aria-label={isMobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-label={isMobileMenuOpen ? (lang === 'pt' ? 'Fechar o menu' : lang === 'en' ? 'Close menu' : 'Fermer le menu') : lang === 'pt' ? 'Abrir o menu' : lang === 'en' ? 'Open menu' : 'Ouvrir le menu'}
             >
               {isMobileMenuOpen ? (
                 <X className="w-5 h-5 text-slate-900" />

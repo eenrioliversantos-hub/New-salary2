@@ -223,6 +223,7 @@ export default function HomePage() {
           'compare-jobs',
           'canada-provinces',
           'resources',
+          'guides',
           'vacation-holidays',
           'rrsp-savings',
           'factory-stub',
@@ -363,7 +364,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                         <span>Revenu Québec & ARC</span>
                       </div>
                       <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                        {t.title} <span className="text-blue-600">Québec</span>
+                        <span>{t.title}</span>{' '}<span className="text-blue-600">Québec</span>
                       </h1>
                       <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                         {lang === 'pt'

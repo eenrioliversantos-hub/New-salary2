@@ -85,7 +85,7 @@ export const CANADIAN_PROVINCES: Record<CanadianProvince, ProvinceInfo> = {
     code: 'BC',
     name: {
       fr: 'Colombie-Britannique',
-      pt: 'Colúmbia Britânica (BC)',
+      pt: 'Colúmbia Britânica',
       en: 'British Columbia',
     },
     flag: '🌲',
@@ -232,7 +232,7 @@ export const CANADIAN_PROVINCES: Record<CanadianProvince, ProvinceInfo> = {
     code: 'PE',
     name: {
       fr: 'Île-du-Prince-Édouard',
-      pt: 'Ilha do Príncipe Eduardo (PEI)',
+      pt: 'Ilha do Príncipe Eduardo',
       en: 'Prince Edward Island',
     },
     flag: '🏝️',
