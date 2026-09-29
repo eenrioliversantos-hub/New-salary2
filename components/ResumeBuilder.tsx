@@ -2829,10 +2829,18 @@ ${data.languages.map((l) => `• ${l.language}: ${l.level}`).join('\n')}
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
           {/* REALISTIC CANADIAN RESUME CANVAS (8.5" x 11" LETTER DIMENSIONS) */}
           <div
-            className={`max-w-4xl mx-auto bg-white p-6 sm:p-10 md:p-12 rounded-2xl border border-slate-200 shadow-2xl text-slate-900 transition-all ${
+            className={`max-w-4xl mx-auto bg-white p-6 sm:p-10 md:p-12 rounded-2xl border border-slate-200 shadow-2xl text-slate-900 transition-all relative overflow-hidden ${
               fontFamily === 'serif' ? 'font-serif' : fontFamily === 'mono' ? 'font-mono' : 'font-sans'
             } print:shadow-none print:border-none print:p-0 print:m-0`}
           >
+            {/* Watermark for Free Version */}
+            {!isPro && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden select-none z-10 opacity-[0.07] print:opacity-[0.05]">
+                <div className="text-slate-950 font-black text-5xl sm:text-6xl tracking-widest uppercase -rotate-45 whitespace-nowrap">
+                  PaieNet Québec — Version Gratuite
+                </div>
+              </div>
+            )}
             {/* -------------------------------------------------------------
                 DOCUMENT A : CURRICULUM VITAE (CV)
             ------------------------------------------------------------- */}

@@ -27,18 +27,24 @@ import {
   Layers,
   ChevronRight,
   Zap,
+  Lock,
+  Crown,
 } from 'lucide-react';
 
 interface InterprovincialSalaryComparatorProps {
   lang: Language;
   onSelectTool?: (tool: ToolId) => void;
   onLoadProvinceToMainCalc?: (prov: CanadianProvince, rate: number, hours: number) => void;
+  isPro?: boolean;
+  onOpenProModal?: (msg?: string) => void;
 }
 
 export const InterprovincialSalaryComparator: React.FC<InterprovincialSalaryComparatorProps> = ({
   lang,
   onSelectTool,
   onLoadProvinceToMainCalc,
+  isPro = false,
+  onOpenProModal,
 }) => {
   // Input parameters
   const [hourlyWage, setHourlyWage] = useState<number>(25.0);
@@ -553,7 +559,36 @@ export const InterprovincialSalaryComparator: React.FC<InterprovincialSalaryComp
       </div>
 
       {/* Full 13 Provinces and Territories Ranked Table */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 relative overflow-hidden">
+        {/* Blur Paywall Overlay */}
+        {!isPro && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 transition-all">
+            <div className="max-w-md bg-white rounded-3xl border border-slate-200/95 p-6 sm:p-8 shadow-2xl space-y-4">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto border border-indigo-100">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                  {lang === 'pt' ? 'Tabela Comparativa Avançada' : 'Tableau Comparatif de Rémunération'}
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {lang === 'pt'
+                    ? 'Desbloqueie o ranking e tabelas comparativas detalhadas das 13 províncias canadenses (salários, impostos e poder de compra real) com o Pass Carrière Pro.'
+                    : 'Débloquez le tableau comparatif complet des 13 provinces et territoires (salaires, impôts et pouvoir d’achat réel) avec le Pass Pro.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenProModal && onOpenProModal('Provinces Rank Paywall')}
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-indigo-600/10 active:scale-95"
+              >
+                <Crown className="w-4 h-4 text-amber-300" />
+                <span>{lang === 'pt' ? 'Desbloquear Acesso Pro ($12.99)' : 'Débloquer le Pass Pro (12,99 $)'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -581,7 +616,7 @@ export const InterprovincialSalaryComparator: React.FC<InterprovincialSalaryComp
         </div>
 
         {/* Responsive Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+        <div className={`overflow-x-auto rounded-2xl border border-slate-200 relative ${!isPro ? 'pb-32' : ''}`}>
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
@@ -601,12 +636,15 @@ export const InterprovincialSalaryComparator: React.FC<InterprovincialSalaryComp
               {sortedProvinces.map((item, index) => {
                 const isSelectedOrigin = item.code === originProv;
                 const isSelectedTarget = item.code === targetProv;
+                const isLocked = !isPro && index >= 3;
 
                 return (
                   <tr
                     key={item.code}
-                    className={`hover:bg-slate-50/80 transition-colors ${
-                      isSelectedOrigin
+                    className={`transition-colors relative ${
+                      isLocked
+                        ? 'opacity-35 blur-[1.2px] select-none pointer-events-none'
+                        : isSelectedOrigin
                         ? 'bg-blue-50/40'
                         : isSelectedTarget
                         ? 'bg-emerald-50/40'
@@ -653,26 +691,56 @@ export const InterprovincialSalaryComparator: React.FC<InterprovincialSalaryComp
                       {item.effectiveTaxRate.toFixed(1)}%
                     </td>
                     <td className="p-3.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onLoadProvinceToMainCalc) {
-                            onLoadProvinceToMainCalc(item.code, resolvedHourly, weeklyHours);
-                          } else if (onSelectTool) {
-                            onSelectTool('net-calc');
-                          }
-                        }}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                        title={`Calcular detalhes completos para ${item.info.name[lang]}`}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      {isLocked ? (
+                        <Lock className="w-3.5 h-3.5 text-slate-400 mx-auto" />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onLoadProvinceToMainCalc) {
+                              onLoadProvinceToMainCalc(item.code, resolvedHourly, weeklyHours);
+                            } else if (onSelectTool) {
+                              onSelectTool('net-calc');
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          title={`Calcular detalhes completos para ${item.info.name[lang]}`}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+
+          {/* Premium Paywall Blur Overlay */}
+          {!isPro && (
+            <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent flex flex-col items-center justify-center text-center p-4 text-white z-10 rounded-b-2xl">
+              <div className="flex items-center gap-1.5 mb-1 bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-md border border-amber-400/30 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                <Crown className="w-3 h-3 text-amber-400" />
+                <span>Premium Feature</span>
+              </div>
+              <h4 className="font-extrabold text-xs sm:text-sm tracking-tight text-white mb-0.5">
+                {lang === 'pt' ? 'Desbloqueie todas as 13 Províncias e Territórios' : 'Débloquez les 13 provinces et territoires'}
+              </h4>
+              <p className="text-[10px] text-slate-300 max-w-md leading-tight mb-2">
+                {lang === 'pt'
+                  ? 'Veja custo de vida e poder de compra para todo o Canadá com o Pass Carrière Pro.'
+                  : 'Comparez le coût de la vie et le pouvoir d’achat pour tout le Canada.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenProModal?.('canada-provinces')}
+                className="px-4 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] transition-all active:scale-95 shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Lock className="w-3 h-3" />
+                <span>{lang === 'pt' ? 'Desbloquear Pass Pro por $12.99 CAD' : 'Débloquer le Pass Pro à 12,99 $'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

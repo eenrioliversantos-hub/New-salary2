@@ -29,6 +29,10 @@ import {
   Award,
   Zap,
   Map,
+  MapPin,
+  Briefcase,
+  Building2,
+  Download,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -378,10 +382,51 @@ export const Header: React.FC<HeaderProps> = ({
   isPro = false,
   onOpenProModal,
   onOpenEbookModal,
+  onSelectB2bTab,
 }) => {
   // Dropdown & Menu State
   const [activeDropdown, setActiveDropdown] = useState<DropdownId>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Rotative Top Ticker Banner State
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+  const banners = [
+    {
+      pt: "🚀 Pass Carrière Pro: Desbloqueie simuladores STAR e testes técnicos por apenas $12.99 CAD.",
+      fr: "🚀 Pass Carrière Pro : Débloquez les simulateurs STAR et tests techniques pour seulement 12,99 $ CAD.",
+      en: "🚀 Pass Carrière Pro: Unlock STAR interview simulators and technical tests for only $12.99 CAD.",
+      btnPt: "Ver Planos",
+      btnFr: "Découvrir",
+      btnEn: "See Plans",
+      tool: "pro-plans" as ToolId
+    },
+    {
+      pt: "📚 Guia Definitivo do Salário & Emprego no Québec (140p): O manual mais completo de 2026.",
+      fr: "📚 Guide Ultime du Salaire & de l'Emploi au Québec (140p) : Le manuel le plus complet de 2026.",
+      en: "📚 Ultimate Quebec Salary & Employment Guide (140p): The most complete manual for 2026.",
+      btnPt: "Obter Guia",
+      btnFr: "Acheter le Guide",
+      btnEn: "Get Guide",
+      tool: "ebook-store" as ToolId
+    },
+    {
+      pt: "🤝 Sua empresa no PaieNet: Anuncie para mais de 48k profissionais no Québec.",
+      fr: "🤝 Votre entreprise sur PaieNet : Annoncez auprès de plus de 48k professionnels au Québec.",
+      en: "🤝 Your brand on PaieNet: Sponsor and advertise to 48k+ professionals in Quebec.",
+      btnPt: "Anunciar / B2B",
+      btnFr: "Annoncer / B2B",
+      btnEn: "Advertise / B2B",
+      tool: "partners" as ToolId
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
 
   const navRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -451,22 +496,46 @@ export const Header: React.FC<HeaderProps> = ({
     'rrsp-savings',
     'factory-stub',
     'compare-jobs',
+    'canada-provinces',
+    'scenarios',
   ].includes(activeTool);
 
   const isCareerActive = [
     'resume-builder',
     'interview-simulator',
     'tech-tests',
+    'pro-plans',
   ].includes(activeTool);
 
-  const isContentActive = ['blog', 'sitemap', 'compliance'].includes(activeTool);
-  const isBusinessActive = activeTool === 'media-kit';
+  const isContentActive = [
+    'resources',
+    'guides',
+    'blog',
+    'ebook-store',
+    'sitemap',
+    'compliance',
+  ].includes(activeTool);
+  const isBusinessActive = ['media-kit', 'partners'].includes(activeTool);
 
   return (
     <header
       className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/90 transition-all shadow-xs"
       ref={navRef}
     >
+      {/* Rotative Top Ticker Banner */}
+      <div className="w-full bg-slate-900 text-white text-[11px] sm:text-xs font-semibold py-1.5 px-4 flex items-center justify-center gap-3 transition-all relative overflow-hidden border-b border-slate-800">
+        <div className="flex items-center gap-2 justify-center flex-wrap text-center select-none animate-in fade-in duration-200">
+          <span>{banners[currentBannerIndex][lang]}</span>
+          <button
+            type="button"
+            onClick={() => handleNavClick(banners[currentBannerIndex].tool)}
+            className="ml-2 px-2.5 py-0.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-extrabold tracking-wide uppercase transition-colors shrink-0 cursor-pointer"
+          >
+            {banners[currentBannerIndex][`btn${lang === 'pt' ? 'Pt' : lang === 'en' ? 'En' : 'Fr'}`]} →
+          </button>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Clean Modern Navbar Row */}
         <div className="flex items-center justify-between h-16 gap-3 sm:gap-6">
@@ -726,27 +795,25 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
 
                       {/* Bottom Feature Card: Case Real Leclerc */}
-                      {onLoadLeclercExample && (
-                        <div className="pt-2.5 border-t border-slate-100">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onLoadLeclercExample();
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-medium transition-colors cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Factory className="w-3.5 h-3.5 text-blue-600" />
-                              <span>{HEADER_I18N.calculators.caseStudyText[lang]}</span>
-                            </div>
-                            <span className="text-[10px] font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                              <span>{HEADER_I18N.calculators.caseStudyAction[lang]}</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </span>
-                          </button>
-                        </div>
-                      )}
+                      <div className="pt-2.5 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onLoadLeclercExample?.();
+                            handleNavClick('scenarios');
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-medium transition-colors cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Factory className="w-3.5 h-3.5 text-blue-600" />
+                            <span>{HEADER_I18N.calculators.caseStudyText[lang]}</span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                            <span>{lang === 'pt' ? 'Ver Estudo Completo' : 'Voir l’étude'}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -846,6 +913,31 @@ export const Header: React.FC<HeaderProps> = ({
                           </span>
                         </div>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleNavClick('pro-plans')}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                          activeTool === 'pro-plans' ? 'bg-indigo-50 text-indigo-900' : 'hover:bg-slate-50 text-slate-800'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                          <Crown className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold block text-slate-900 group-hover:text-indigo-700">
+                              {lang === 'pt' ? 'Pass Carrière Pro & Planos' : 'Pass Carrière Pro & Forfaits'}
+                            </span>
+                            <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1 py-0.2 rounded">
+                              Pro
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                            {lang === 'pt' ? 'Acesso ilimitado a CVs ATS, simulador STAR e testes' : 'Accès illimité aux CVs conformes ATS et entrevues'}
+                          </span>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -899,14 +991,64 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-semibold block text-slate-900 group-hover:text-emerald-700">
-                              {lang === 'pt' ? 'Acervo de Guias & Infoprodutos' : lang === 'en' ? 'Guides & Downloads Library' : 'Centre de Guides & Téléchargements'}
+                              {lang === 'pt' ? 'E-books & Infoprodutos Premium' : lang === 'en' ? 'Premium E-books & Guides Store' : 'E-books & Guides Premium'}
                             </span>
-                            <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded">
-                              Hub
+                            <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1 py-0.2 rounded">
+                              PRO
                             </span>
                           </div>
                           <span className="text-[11px] text-slate-500 font-normal leading-tight block">
-                            {lang === 'pt' ? 'E-books, modelos de CV, planilhas e checklists' : 'E-books, ATS resumes, budget sheets and checklists'}
+                            {lang === 'pt' ? 'Nossos melhores guias para alavancar seu salário no Canadá' : 'Our highest-value premium guides to boost your Canadian salary'}
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleNavClick('guides')}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                          activeTool === 'guides' ? 'bg-indigo-50 text-indigo-900' : 'hover:bg-slate-50 text-slate-800'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <Download className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold block text-slate-900 group-hover:text-indigo-700">
+                              {lang === 'pt' ? 'Biblioteca de Downloads Grátis' : lang === 'en' ? 'Free Downloads Library' : 'Bibliothèque de documents gratuits'}
+                            </span>
+                            <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded">
+                              Gratuit
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                            {lang === 'pt' ? 'Modelos de CV em Word, planilhas orçamentárias e checklists de imigração' : 'Word resume templates, budgeting sheets and checklists'}
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleNavClick('ebook-store')}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                          activeTool === 'ebook-store' ? 'bg-amber-50 text-amber-900' : 'hover:bg-slate-50 text-slate-800'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-slate-900 group-hover:text-amber-800">
+                              {HEADER_I18N.content.ebookTitle[lang]}
+                            </span>
+                            <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1 py-0.2 rounded">
+                              140p
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                            {HEADER_I18N.content.ebookDesc[lang]}
                           </span>
                         </div>
                       </button>
@@ -930,34 +1072,6 @@ export const Header: React.FC<HeaderProps> = ({
                           </span>
                         </div>
                       </button>
-
-                      {onOpenEbookModal && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onOpenEbookModal();
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left hover:bg-slate-50 transition-colors cursor-pointer group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                            <Sparkles className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-slate-900 group-hover:text-amber-800">
-                                {HEADER_I18N.content.ebookTitle[lang]}
-                              </span>
-                              <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1 py-0.2 rounded">
-                                140p
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-slate-500 font-normal leading-tight block">
-                              {HEADER_I18N.content.ebookDesc[lang]}
-                            </span>
-                          </div>
-                        </button>
-                      )}
 
                       <button
                         type="button"
@@ -1101,6 +1215,31 @@ export const Header: React.FC<HeaderProps> = ({
                           </span>
                         </div>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleNavClick('partners')}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                          activeTool === 'partners' ? 'bg-emerald-50 text-emerald-900' : 'hover:bg-slate-50 text-slate-800'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-slate-900 group-hover:text-emerald-700">
+                              {lang === 'pt' ? 'Espaço Parceiros & Patrocinadores' : 'Espace Partenaires & Commanditaires'}
+                            </span>
+                            <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded">
+                              2026
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                            {lang === 'pt' ? 'Cadastre sua instituição financeira ou RH' : 'Associez votre entreprise ou cabinet'}
+                          </span>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1190,10 +1329,10 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Pro Upgrade CTA */}
-            {onOpenProModal && !isPro && (
+            {!isPro && (
               <button
                 type="button"
-                onClick={() => onOpenProModal()}
+                onClick={() => handleNavClick('pro-plans')}
                 className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
               >
                 <Crown className="w-3.5 h-3.5 text-amber-400" />
@@ -1340,6 +1479,18 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
               </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('scenarios')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-blue-700 bg-blue-50/50 hover:bg-blue-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Scale className="w-4 h-4 text-blue-600" />
+                  <span>{lang === 'pt' ? 'Cenários & Estudo de Caso' : 'Scénarios & Étude de Cas'}</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-blue-500" />
+              </button>
             </div>
 
             {/* Mobile Section 2: Carreira */}
@@ -1383,6 +1534,20 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
               </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('pro-plans')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-indigo-700 bg-indigo-50/60 hover:bg-indigo-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'pt' ? 'Carrière Pro & Planos' : 'Carrière Pro & Forfaits'}</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded">
+                  PRO
+                </span>
+              </button>
             </div>
 
             {/* Mobile Section 3: B2B, Blog & Mapa do Site */}
@@ -1390,6 +1555,62 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 block">
                 {HEADER_I18N.mobile.resources[lang]}
               </span>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('resources')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>{lang === 'pt' ? 'Guias & E-books Premium' : 'Guides & E-books Premium'}</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded">
+                  PRO
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('guides')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-indigo-900 bg-indigo-50/70 hover:bg-indigo-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Download className="w-4 h-4 text-indigo-600" />
+                  <span>{lang === 'pt' ? 'Biblioteca de Downloads Grátis' : 'Free Downloads Library'}</span>
+                </div>
+                <span className="text-[10px] font-bold bg-emerald-600 text-white px-1.5 py-0.2 rounded">
+                  Gratuit
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('ebook-store')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-amber-900 bg-amber-50/70 hover:bg-amber-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <BookOpen className="w-4 h-4 text-amber-600" />
+                  <span>{lang === 'pt' ? 'Guia Definitivo do Salário (140p)' : 'Guide Ultime de la Paie (140p)'}</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded">
+                  $9.99
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('partners')}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4 text-emerald-600" />
+                  <span>{lang === 'pt' ? 'Espaço Parceiros & Patrocinadores' : 'Espace Partenaires'}</span>
+                </div>
+                <span className="text-[10px] font-bold bg-emerald-600 text-white px-1.5 py-0.2 rounded">
+                  B2B
+                </span>
+              </button>
 
               <button
                 type="button"

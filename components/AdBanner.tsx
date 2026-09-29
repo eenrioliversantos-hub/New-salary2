@@ -29,6 +29,7 @@ export interface AdBannerProps {
   previewSlot?: AdSlotConfig;
   isPreviewMode?: boolean;
   onNavigateToMediaKit?: () => void;
+  lang?: string;
 }
 
 export const AdBanner: React.FC<AdBannerProps> = ({
@@ -41,6 +42,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   previewSlot,
   isPreviewMode = false,
   onNavigateToMediaKit,
+  lang = 'fr',
 }) => {
   // Sync with admin store
   const allSlots = useSyncExternalStore(
@@ -52,6 +54,57 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   // Toggle state to let visitors/advertisers toggle between active ad example and "Seu Anúncio Aqui"
   const [showVacancyNotice, setShowVacancyNotice] = useState<boolean>(false);
 
+  // Dynamic Rotative House Ads State based on active page/tool
+  const [activeTool, setActiveTool] = useState<string>('net-calc');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleHash = () => {
+        setActiveTool(window.location.hash.replace('#', '') || 'net-calc');
+      };
+      handleHash();
+      window.addEventListener('hashchange', handleHash);
+      return () => window.removeEventListener('hashchange', handleHash);
+    }
+  }, []);
+
+  const houseAdsSponsor = useMemo(() => {
+    if (['resume-builder', 'interview-simulator', 'tech-tests', 'pro-plans'].includes(activeTool)) {
+      return {
+        sponsorName: 'Pass PaieNet Carrière Pro',
+        headline: lang === 'pt' ? 'Conquiste o Emprego dos Seus Sonhos no Québec' : 'Décrochez votre emploi de rêve au Québec',
+        tagline: lang === 'pt' ? 'Desbloqueie simuladores de entrevista STAR, testes técnicos resolvidos e gerador de CV ATS.' : 'Débloquez les simulateurs STAR, tests corrigés et le générateur de CV ATS.',
+        linkUrl: '#pro-plans',
+        badgeText: lang === 'pt' ? 'Destaque Profissional' : 'Carrière Pro',
+        ctaText: lang === 'pt' ? 'Desbloquear Pass Pro' : 'Débloquer le Pass Pro',
+        themeGradient: 'indigo',
+        iconType: 'rocket',
+      };
+    } else if (['media-kit', 'partners'].includes(activeTool)) {
+      return {
+        sponsorName: 'Vitrinas Comerciais PaieNet',
+        headline: lang === 'pt' ? 'Anuncie Conosco e Alcance 48.000+ Profissionais' : 'Annoncez sur PaieNet & Touchez 48k+ professionnels',
+        tagline: lang === 'pt' ? 'Garanta visibilidade premium e leads de alta conversão pós-cálculo de salário.' : 'Profitez de bannières natives ciblées et captez des leads ultra-qualifiés.',
+        linkUrl: '#partners',
+        badgeText: 'B2B & Patrocínios',
+        ctaText: lang === 'pt' ? 'Ver Mídia Kit B2B' : 'Consulter les Lots B2B',
+        themeGradient: 'dark',
+        iconType: 'shield',
+      };
+    } else {
+      return {
+        sponsorName: 'Guia Definitivo do Salário no Québec 2026',
+        headline: lang === 'pt' ? 'Evite Erros Fiscais e Normativos que Custam Caro' : 'Évitez les erreurs sur votre paie québécoise',
+        tagline: lang === 'pt' ? '140 páginas sobre impostos Revenu Québec/ARC, CNESST, bônus de Excel e modelos de CV.' : '140 pages pour décrypter vos retenues, normes CNESST et bonus Excel.',
+        linkUrl: '#ebook-store',
+        badgeText: 'Manual Bestseller',
+        ctaText: lang === 'pt' ? 'Comprar E-book $9.99' : 'Acheter l’E-book 9,99 $',
+        themeGradient: 'amber',
+        iconType: 'star',
+      };
+    }
+  }, [activeTool, lang]);
+
   const adSlot = useMemo(() => {
     if (previewSlot) return previewSlot;
     if (slotId) return allSlots.find((s) => s.id === slotId);
@@ -60,15 +113,21 @@ export const AdBanner: React.FC<AdBannerProps> = ({
       if (match) return match;
       if (fallbackSection) return allSlots.find((s) => s.pageSection === fallbackSection);
     }
-    return allSlots.find((s) => s.id === format || s.format === format);
-  }, [previewSlot, slotId, section, fallbackSection, format, allSlots]);
+    return allSlots.find((s) => s.id === format || s.format === format) || null;
+  }, [allSlots, slotId, section, fallbackSection, previewSlot, format]);
+
+  const activeSponsor = useMemo(() => {
+    if (isPreviewMode) return adSlot?.customSponsor;
+    // Always prioritize house ads to promote our own products!
+    return houseAdsSponsor;
+  }, [isPreviewMode, adSlot, houseAdsSponsor]);
 
   // Record impression on mount (only in live mode, not preview)
   useEffect(() => {
     if (!isPreviewMode && adSlot?.id && adSlot.status !== 'paused') {
       adminStore.recordAdImpression(adSlot.id);
     }
-  }, [adSlot?.id, adSlot?.status, isPreviewMode]);
+  }, [adSlot, isPreviewMode]);
 
   // Anchor ID for quick navigation / verification
   const anchorId =
@@ -191,8 +250,8 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   };
 
   // If custom direct sponsor is configured AND user didn't toggle to see the vacancy notice
-  if (adSlot?.status === 'custom-sponsor' && adSlot.customSponsor && !showVacancyNotice) {
-    const sponsor = adSlot.customSponsor;
+  if (adSlot?.status === 'custom-sponsor' && activeSponsor && !showVacancyNotice) {
+    const sponsor = activeSponsor;
     const destinationUrl = normalizeUrl(sponsor.linkUrl);
 
     const handleSponsorClick = (e: React.MouseEvent) => {

@@ -148,7 +148,7 @@ export const PartnerSponsorSection: React.FC<PartnerSponsorSectionProps> = ({
           type="button"
           onClick={() => {
             if (onSelectTool) {
-              onSelectTool('media-kit');
+              onSelectTool('partners');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
               onOpenPartnerModal();
@@ -192,7 +192,14 @@ export const PartnerSponsorSection: React.FC<PartnerSponsorSectionProps> = ({
 
             <button
               type="button"
-              onClick={onOpenPartnerModal}
+              onClick={() => {
+                if (onSelectTool) {
+                  onSelectTool('partners');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  onOpenPartnerModal();
+                }
+              }}
               className="inline-flex items-center justify-between text-xs font-bold text-blue-900 hover:text-blue-700 pt-3 border-t border-slate-100 cursor-pointer group"
             >
               <span>{slot.actionText}</span>

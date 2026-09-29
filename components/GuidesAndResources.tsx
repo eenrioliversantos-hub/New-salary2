@@ -115,10 +115,10 @@ export const GuidesAndResources: React.FC<GuidesAndResourcesProps> = ({
     e.preventDefault();
     if (!newsletterEmail.trim()) return;
 
-    adminStore.addNewsletterLead({
-      email: newsletterEmail.trim(),
-      source: 'guias-recursos-hub',
-    });
+    adminStore.addNewsletterLead(
+      newsletterEmail.trim(),
+      'guias-recursos-hub'
+    );
 
     setNewsletterSubmitted(true);
   };

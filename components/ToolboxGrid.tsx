@@ -42,7 +42,11 @@ export type ToolId =
   | 'blog'
   | 'media-kit'
   | 'sitemap'
-  | 'admin';
+  | 'admin'
+  | 'ebook-store'
+  | 'pro-plans'
+  | 'scenarios'
+  | 'partners';
 
 interface ToolboxGridProps {
   lang: Language;
@@ -136,9 +140,41 @@ export const ToolboxGrid: React.FC<ToolboxGridProps> = ({
       color: 'sky',
       badge: '100% Fidèle',
     },
+    {
+      id: 'scenarios' as ToolId,
+      name: lang === 'pt' ? 'Cenários & Estudo de Caso' : lang === 'en' ? 'Paycheck Scenarios' : 'Scénarios & Études de Cas',
+      desc: lang === 'pt' ? 'Comparativo entre cálculo governamental e contracheque industrial com adicionais reais' : lang === 'en' ? 'Comparison between basic government pay calculation and audited industrial paystubs' : 'Comparatif entre calcul gouvernemental de base et fiches de paie réelles',
+      icon: Scale,
+      color: 'blue',
+      badge: lang === 'pt' ? 'Caso Real' : 'Case Study',
+    },
   ];
 
   const careerTools = [
+    {
+      id: 'ebook-store' as ToolId,
+      name: lang === 'pt' ? 'Guia Definitivo & E-books' : lang === 'en' ? 'Ultimate Quebec Guides & E-books' : 'Guide Ultime & Livres Numériques',
+      desc: lang === 'pt' ? 'Manual completo de 140 páginas sobre impostos, deduções e direitos CNESST + bônus de CV e planilhas' : lang === 'en' ? '140-page official handbook on tax brackets, CNESST laws, ATS templates and living costs' : 'Manuel officiel de 140 pages sur les impôts, normes du travail CNESST et bonus',
+      icon: BookOpen,
+      color: 'amber',
+      badge: '140p Bestseller',
+    },
+    {
+      id: 'pro-plans' as ToolId,
+      name: lang === 'pt' ? 'Carrière Pro & Planos' : lang === 'en' ? 'Carrière Pro Membership' : 'Carrière Pro & Forfaits',
+      desc: lang === 'pt' ? 'Acesso ilimitado ao gerador de CV ATS, simulador comportamental STAR e testes técnicos comentados' : lang === 'en' ? 'Unlimited access to Canadian ATS resume exports, STAR interview simulator and tests' : 'Accès illimité aux CVs conformes ATS, simulateur d’entrevue STAR et tests corrigés',
+      icon: Crown,
+      color: 'indigo',
+      badge: 'Pro Vitalício',
+    },
+    {
+      id: 'partners' as ToolId,
+      name: lang === 'pt' ? 'Parceiros & Patrocinadores' : lang === 'en' ? 'Partners & Sponsors' : 'Partenaires & Commanditaires',
+      desc: lang === 'pt' ? 'Associe sua instituição financeira, assessoria de RH ou empresa ao calculador oficial do Québec' : lang === 'en' ? 'Partner with Quebec leading payroll platform for B2B brand exposure and sponsorship' : 'Associez votre entreprise au portail de paie de référence au Québec',
+      icon: Building2,
+      color: 'emerald',
+      badge: 'B2B 2026',
+    },
     {
       id: 'resume-builder' as ToolId,
       name: lang === 'pt' ? 'Construtor de Currículo Québec' : lang === 'en' ? 'Quebec ATS Resume Builder' : 'Générateur de CV Format Canadien',

@@ -103,6 +103,45 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
     return articles.filter((a) => a.category === activeArticle.category && a.id !== activeArticle.id).slice(0, 2);
   }, [activeArticle, articles]);
 
+  const renderParagraphWithLinks = (text: string) => {
+    const linkRegex = /\[([^\]]+)\]\(#([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      const matchIndex = match.index;
+      if (matchIndex > lastIndex) {
+        parts.push(text.substring(lastIndex, matchIndex));
+      }
+      
+      const linkText = match[1];
+      const targetHash = match[2] as ToolId;
+
+      parts.push(
+        <button
+          key={matchIndex}
+          type="button"
+          onClick={() => {
+            onSelectTool(targetHash);
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+          }}
+          className="text-blue-600 hover:text-blue-700 font-extrabold hover:underline cursor-pointer inline bg-transparent p-0 m-0 border-none align-baseline text-xs sm:text-sm"
+        >
+          {linkText}
+        </button>
+      );
+
+      lastIndex = linkRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
   return (
     <div className="space-y-8">
       {/* If an article is selected, display Enhanced Article Reader */}
@@ -222,7 +261,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-800 leading-relaxed space-y-4 pt-2">
               {(activeArticle.content[lang] || activeArticle.content.pt || []).map((paragraph, idx) => (
                 <p key={idx} className="leading-relaxed">
-                  {paragraph}
+                  {renderParagraphWithLinks(paragraph)}
                 </p>
               ))}
             </div>
@@ -352,9 +391,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             )}
 
             {/* ============================================================== */}
-            {/* MONETIZATION ZONE 5: E-BOOK CTA BANNER                         */}
+            {/* MONETIZATION ZONE 5: SMART RECOMMENDATION BOX (INTENT-BASED)   */}
             {/* ============================================================== */}
-            {activeArticle.hasEbookCta && (
+            {(activeArticle.category === 'impots' || activeArticle.category === 'finances') ? (
               <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-blue-50 border border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-xs font-black">
@@ -392,6 +431,46 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                 >
                   <CreditCard className="w-3.5 h-3.5 text-amber-300" />
                   <span>{lang === 'pt' ? 'Comprar E-book ($9.99)' : lang === 'en' ? 'Buy E-book ($9.99)' : 'Acheter l’E-book (9,99 $)'}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-400/15 to-blue-50 border border-indigo-300 flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs font-black">
+                    <Crown className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-900 block">
+                      {lang === 'pt'
+                        ? 'Aceleração Profissional Recomendada'
+                        : lang === 'en'
+                        ? 'Recommended Professional Path'
+                        : 'Accélération Professionnelle Recommandée'}
+                    </span>
+                    <h5 className="font-extrabold text-sm sm:text-base text-slate-900">
+                      {lang === 'pt'
+                        ? 'Pass Carrière Pro: Desbloqueie todas as ferramentas'
+                        : lang === 'en'
+                        ? 'Pass Carrière Pro: Unlock all screening prep'
+                        : 'Pass Carrière Pro : Débloquez tous les simulateurs'}
+                    </h5>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      {lang === 'pt'
+                        ? 'Acesso vitalício ilimitado a CVs ATS, simulador STAR e testes técnicos por $12.99 CAD.'
+                        : lang === 'en'
+                        ? 'Lifetime access to ATS resumes, STAR interview simulators and tests for $12.99 CAD.'
+                        : 'Accès à vie aux CVs ATS, simulateur STAR et tests techniques pour 12,99 $.'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onSelectTool('pro-plans')}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs whitespace-nowrap shadow-sm transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{lang === 'pt' ? 'Desbloquear Pass Pro' : lang === 'en' ? 'Get Pass Pro' : 'Activer le Pass Pro'}</span>
                 </button>
               </div>
             )}

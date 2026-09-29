@@ -263,7 +263,9 @@ Déménager avant ou après le 31 décembre peut changer votre facture fiscale d
       setDownloadModalAsset(asset);
       setDownloadSuccess(false);
     } else {
-      if (onOpenEbookModal) {
+      if (onSelectTool) {
+        onSelectTool('ebook-store');
+      } else if (onOpenEbookModal) {
         onOpenEbookModal();
       } else if (onOpenProModal) {
         onOpenProModal('resources-hub');

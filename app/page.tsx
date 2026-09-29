@@ -19,7 +19,6 @@ import { DeductionsBreakdown } from '@/components/DeductionsBreakdown';
 import { QuebecBenefitsTools } from '@/components/QuebecBenefitsTools';
 import { RaiseSimulator } from '@/components/RaiseSimulator';
 import { PrecisionCard } from '@/components/PrecisionCard';
-import { ScenariosModal } from '@/components/ScenariosModal';
 import { FaqSection } from '@/components/FaqSection';
 import { Footer } from '@/components/Footer';
 import { ToolboxGrid, ToolId } from '@/components/ToolboxGrid';
@@ -29,16 +28,19 @@ import { JobOfferComparator } from '@/components/JobOfferComparator';
 import { ResumeBuilder } from '@/components/ResumeBuilder';
 import { InterviewSimulator } from '@/components/InterviewSimulator';
 import { TechnicalTestsSimulator } from '@/components/TechnicalTestsSimulator';
-import { MonetizationModal } from '@/components/MonetizationModal';
 import { BlogSection } from '@/components/BlogSection';
 import { CommercialShowcase } from '@/components/CommercialShowcase';
 import { SiteCompliancePages } from '@/components/SiteCompliancePages';
-import { EbookModal } from '@/components/EbookModal';
+import { EbookStorePage } from '@/components/EbookStorePage';
+import { ProPlansPage } from '@/components/ProPlansPage';
+import { ScenariosPage } from '@/components/ScenariosPage';
+import { PartnersPage } from '@/components/PartnersPage';
 import { NewsletterBox } from '@/components/NewsletterBox';
 import { AdminPanel } from '@/components/AdminPanel';
 import { AdBanner } from '@/components/AdBanner';
 import { InterprovincialSalaryComparator } from '@/components/InterprovincialSalaryComparator';
 import { ResourceHubSection } from '@/components/ResourceHubSection';
+import { GuidesAndResources } from '@/components/GuidesAndResources';
 import { B2BTab } from '@/components/CommercialShowcase';
 import { adminStore } from '@/lib/admin-store';
 import {
@@ -66,15 +68,13 @@ export default function HomePage() {
   const [netCalcView, setNetCalcView] = useState<'workspace' | 'results'>('workspace');
   const [copied, setCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isScenariosModalOpen, setIsScenariosModalOpen] = useState(false);
-  const [isEbookModalOpen, setIsEbookModalOpen] = useState(false);
   const [selectedEbookAssetId, setSelectedEbookAssetId] = useState<string | undefined>(undefined);
   const [selectedBlogArticleId, setSelectedBlogArticleId] = useState<string | null>(null);
   const [b2bTab, setB2bTab] = useState<B2BTab>('catalog');
 
   const handleOpenEbookModal = (assetId?: string) => {
-    setSelectedEbookAssetId(assetId);
-    setIsEbookModalOpen(true);
+    if (assetId) setSelectedEbookAssetId(assetId);
+    handleSelectTool('ebook-store');
   };
 
   // Monetization & Pro features (reactive & SSR hydration safe)
@@ -83,8 +83,7 @@ export default function HomePage() {
     () => adminStore.isProUser(),
     () => false
   );
-  const [isMonetizationModalOpen, setIsMonetizationModalOpen] = useState(false);
-  const [monetizationTrigger, setMonetizationTrigger] = useState<string | undefined>(undefined);
+  const [_monetizationTrigger, setMonetizationTrigger] = useState<string | undefined>(undefined);
 
   const handleUnlockPro = () => {
     adminStore.setProUser(true);
@@ -93,8 +92,8 @@ export default function HomePage() {
   };
 
   const handleOpenProModal = (triggerMsg?: string) => {
-    setMonetizationTrigger(triggerMsg);
-    setIsMonetizationModalOpen(true);
+    if (triggerMsg) setMonetizationTrigger(triggerMsg);
+    handleSelectTool('pro-plans');
   };
 
   // Default parameters for standard Quebec hourly worker
@@ -197,6 +196,9 @@ export default function HomePage() {
     if (tool === 'net-calc') {
       setNetCalcView('workspace');
     }
+    if (typeof window !== 'undefined') {
+      window.location.hash = tool;
+    }
     if (tool !== 'admin') {
       adminStore.logEvent({
         id: `evt-${Date.now()}`,
@@ -207,6 +209,48 @@ export default function HomePage() {
       });
     }
   };
+
+  // Sync hash on initial load & popstate/hashchange
+  useEffect(() => {
+    const handleHash = () => {
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const hash = window.location.hash.replace('#', '') as ToolId;
+        const validTools: ToolId[] = [
+          'net-calc',
+          'converter',
+          'raise',
+          'overtime',
+          'compare-jobs',
+          'canada-provinces',
+          'resources',
+          'vacation-holidays',
+          'rrsp-savings',
+          'factory-stub',
+          'resume-builder',
+          'interview-simulator',
+          'tech-tests',
+          'blog',
+          'media-kit',
+          'sitemap',
+          'admin',
+          'ebook-store',
+          'pro-plans',
+          'scenarios',
+          'partners',
+        ];
+        if (validTools.includes(hash)) {
+          if (hash === 'factory-stub') {
+            handleLoadLeclercExample();
+          } else {
+            setActiveTool(hash);
+          }
+        }
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   const handleApplyRaise = (newRate: number) => {
     const regHours = Math.max(0.5, input.regularHoursPerWeek || 40);
@@ -271,7 +315,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
         hourlyRate={input.hourlyRate}
         netAmount={calculation.selectedPeriod.net}
         locale={locale}
-        onOpenScenarios={() => setIsScenariosModalOpen(true)}
+        onOpenScenarios={() => handleSelectTool('scenarios')}
         frequencyLabel={calculation.selectedPeriod.label}
         totalHoursPerWeek={calculation.totalHoursPerWeek}
         onLoadLeclercExample={handleLoadLeclercExample}
@@ -358,7 +402,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                       <PrecisionCard
                         precision={calculation.precision}
                         lang={lang}
-                        onOpenScenariosModal={() => setIsScenariosModalOpen(true)}
+                        onOpenScenariosModal={() => handleSelectTool('scenarios')}
                       />
                     </div>
 
@@ -516,6 +560,8 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
               <InterprovincialSalaryComparator
                 lang={lang}
                 onSelectTool={handleSelectTool}
+                isPro={isPro}
+                onOpenProModal={handleOpenProModal}
                 onLoadProvinceToMainCalc={(prov, rate, hours) => {
                   setInput((prev) => ({
                     ...prev,
@@ -553,6 +599,21 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                 onSelectTool={handleSelectTool}
                 onOpenEbookModal={handleOpenEbookModal}
                 onOpenProModal={handleOpenProModal}
+              />
+            </motion.div>
+          )}
+
+          {/* TOOL 5.3: FREE LIBRARY AND DOWNLOADS HUB */}
+          {activeTool === 'guides' && (
+            <motion.div
+              key="guides-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <GuidesAndResources
+                lang={lang}
               />
             </motion.div>
           )}
@@ -690,6 +751,73 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
               />
             </motion.div>
           )}
+
+          {/* TOOL 14: GUIA DEFINITIVO & E-BOOK STORE (PÁGINA COMPLETA) */}
+          {activeTool === 'ebook-store' && (
+            <motion.div
+              key="ebook-store-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <EbookStorePage
+                lang={lang}
+                onSelectTool={handleSelectTool}
+                initialAssetId={selectedEbookAssetId}
+              />
+            </motion.div>
+          )}
+
+          {/* TOOL 15: CARRIÈRE PRO & PLANOS (PÁGINA COMPLETA) */}
+          {activeTool === 'pro-plans' && (
+            <motion.div
+              key="pro-plans-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <ProPlansPage
+                lang={lang}
+                onSelectTool={handleSelectTool}
+                onUnlockPro={handleUnlockPro}
+              />
+            </motion.div>
+          )}
+
+          {/* TOOL 16: CENÁRIOS & ESTUDO DE CASO LECLERC (PÁGINA COMPLETA) */}
+          {activeTool === 'scenarios' && (
+            <motion.div
+              key="scenarios-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <ScenariosPage
+                lang={lang}
+                onSelectTool={handleSelectTool}
+                onLoadLeclercExample={handleLoadLeclercExample}
+              />
+            </motion.div>
+          )}
+
+          {/* TOOL 17: PROGRAMA DE PARCEIROS & COMMANDITAIRES (PÁGINA COMPLETA) */}
+          {activeTool === 'partners' && (
+            <motion.div
+              key="partners-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <PartnersPage
+                lang={lang}
+                onSelectTool={handleSelectTool}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Mapped Toolbox Sponsor Banner */}
@@ -727,34 +855,6 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
         lang={lang}
         onSelectTool={handleSelectTool}
         onOpenEbookModal={handleOpenEbookModal}
-      />
-
-      {/* Scenarios Modal */}
-      <ScenariosModal
-        isOpen={isScenariosModalOpen}
-        onClose={() => setIsScenariosModalOpen(false)}
-        onLoadLeclercExample={handleLoadLeclercExample}
-        lang={lang}
-      />
-
-      {/* Monetization & Pro Checkout Modal */}
-      <MonetizationModal
-        isOpen={isMonetizationModalOpen}
-        onClose={() => setIsMonetizationModalOpen(false)}
-        lang={lang}
-        onUnlockPro={handleUnlockPro}
-        featureTrigger={monetizationTrigger}
-      />
-
-      {/* Official Ebook & Digital Assets Hub Modal */}
-      <EbookModal
-        isOpen={isEbookModalOpen}
-        onClose={() => {
-          setIsEbookModalOpen(false);
-          setSelectedEbookAssetId(undefined);
-        }}
-        lang={lang}
-        initialAssetId={selectedEbookAssetId}
       />
 
       {/* Mobile Sticky Quick Summary Bar */}

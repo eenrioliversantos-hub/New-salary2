@@ -435,14 +435,14 @@ const INITIAL_ARTICLES: BlogArticleData[] = [
         '1. O Regime de Aposentadoria do Québec (RRQ): Ao contrário das outras províncias canadenses que contribuem para o CPP (Canada Pension Plan), o Québec possui seu próprio fundo de pensão estatal. A alíquota combinada incide sobre os ganhos admissíveis acima da isenção básica de $3.500 CAD.',
         '2. O Seguro Parental (RQAP): Financia as licenças de maternidade, paternidade e adoção com benefícios mais generosos que no restante do país. Em contrapartida, a alíquota de Seguro-Desemprego (Assurance-Emploi / AE) federal cobrada no Québec é menor do que nas outras províncias canadenses.',
         '3. O Abatimento do Québec de 16,5%: Esta é a maior peculiaridade fiscal! Como o governo provincial do Québec financia diretamente seus próprios programas sociais, o governo federal do Canadá concede um desconto automático de 16,5% sobre o imposto federal devido.',
-        'Nossa calculadora PaieNet.qc reproduz essa fórmula com precisão matemática até o centavo, permitindo que você confira se o departamento de recursos humanos da sua empresa está aplicando as retenções corretas.',
+        'Nossa calculadora PaieNet.qc reproduz essa fórmula com precisão matemática até o centavo, permitindo que você confira se o departamento de recursos humanos da sua empresa está aplicando as retenções corretas. Simule seus impostos e retenções detalhadas em segundos acessando o nosso [Calculador de Salário Líquido do Québec](#net-calc) ou compare o seu salário líquido com outras regiões usando o [Comparador de Salários Canadenses](#canada-provinces).',
       ],
       fr: [
         'Pour tout travailleur ou immigrant arrivant au Québec, recevoir son premier talon de paie peut être surprenant : l’écart entre le salaire brut négocié et le montant net déposé dans votre compte bancaire est influencé par plusieurs régimes publics propres à la province.',
         '1. Le Régime de rentes du Québec (RRQ) : Contrairement aux autres provinces canadiennes qui cotisent au RPC (Régime de pensions du Canada), le Québec possède son propre fonds de retraite public. Le taux combiné s’applique sur les gains admissibles au-delà de l’exemption de base de 3 500 $.',
         '2. Le Régime québécois d’assurance parentale (RQAP) : Ce régime finance les congés de maternité, de paternité et d’adoption avec des prestations généreuses. En échange, le taux d’assurance-emploi (AE) fédéral prélevé au Québec est réduit comparativement au reste du Canada.',
         '3. L’Abattement du Québec de 16,5 % : Le gouvernement fédéral accorde au Québec un crédit automatique de 16,5 % sur l’impôt de base fédéral parce que le Québec finance lui-même plusieurs programmes sociaux.',
-        'Notre calculateur PaieNet intègre cette formule officielle avec exactitude mathématique pour vérifier chacune de vos paies.',
+        'Notre calculateur PaieNet intègre cette formule officielle avec exactitude mathématique pour vérifier chacune de vos paies. Calculez votre salaire net en quelques secondes sur le [Calculateur de Salaire Net Québec](#net-calc) ou comparez-le avec d\'autres régions sur le [Comparateur Provincial](#canada-provinces).',
       ],
       en: [
         'For any worker or newcomer in Quebec, receiving your first paystub can be surprising: the gap between negotiated gross pay and net cash deposited is shaped by Quebec’s distinct social regimes.',
@@ -528,16 +528,19 @@ const INITIAL_ARTICLES: BlogArticleData[] = [
         '• Resumo de Qualificações (Profil): 3 a 4 linhas fortes destacando sua especialidade e valor agregado.',
         '• Competências Técnicas: Lista com palavras-chave exatas da descrição da vaga para passar na triagem do ATS.',
         '• Experiência com Verbos de Ação e Resultados: Estruture cada cargo com conquistas mensuráveis (ex: "Aumentou a produtividade em 18%", "Reduziu o tempo de parada de máquinas em 25%").',
+        'Para criar seu currículo totalmente otimizado e em conformidade com as regras canadenses, acesse nosso [Construtor de Currículo Québec](#resume-builder) de forma gratuita. Se precisar de uma revisão de perfil avançada e preparação integral de carreira, confira o nosso plano completo em [Carrière Pro & Planos](#pro-plans).'
       ],
       fr: [
         'Dans de nombreux pays, mettre une photo soignée sur son CV est la norme. Au Canada et particulièrement au Québec, c’est rigoureusement l’inverse !',
         'Pourquoi ce rejet systématique ? La Charte québécoise des droits et libertés interdit toute discrimination à l’embauche. Pour se protéger légalement de toute contestation, les départements RH et les systèmes ATS éliminent immédiatement les CVs contenant une photo ou l’état civil.',
         'La structure gagnante au Québec : En-tête épuré, profil percutant de 3-4 lignes, compétences clés avec mots-clés de l’offre, et réalisations concrètes chiffrées avec verbes d’action.',
+        'Pour créer votre CV de manière autonome et conforme aux normes ATS, utilisez notre [Créateur de CV Québec](#resume-builder) gratuit. Pour un accompagnement premium, consultez nos plans dans [Pass Carrière Pro](#pro-plans).'
       ],
       en: [
         'In many countries, attaching a professional headshot to your resume is standard. In Canada and Quebec, it is the number one reason applications get disqualified immediately.',
         'Strict anti-discrimination legislation requires HR teams and ATS scanners to discard resumes containing personal pictures, age, gender, or marital status.',
         'The winning structure: Clean header without street address or photo, powerful 3-sentence summary, targeted skills matching job keywords, and bullet points starting with strong action verbs and quantifiable results.',
+        'You can craft your compliant resume directly with our free [ATS Resume Builder](#resume-builder), or upgrade to premium interview simulation in [Pass Carrière Pro](#pro-plans).'
       ],
     },
     ctaTool: 'resume-builder',

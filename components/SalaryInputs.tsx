@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TaxInput, CanadianProvince, CANADIAN_PROVINCES } from '@/lib/tax-engine';
+import { TaxInput, CanadianProvince, CANADIAN_PROVINCES, SalaryEntryMode } from '@/lib/tax-engine';
 import { Language, translations } from '@/lib/i18n';
 import {
   DollarSign,
@@ -11,11 +11,8 @@ import {
   ChevronUp,
   Sparkles,
   RefreshCcw,
-  Sliders,
   ShieldPlus,
-  Coffee,
   Factory,
-  HelpCircle,
   ArrowRight,
   Calculator,
   MapPin,
@@ -28,11 +25,6 @@ interface SalaryInputsProps {
   onCalculate?: () => void;
   lang: Language;
 }
-
-const HOURLY_PRESETS = [15.75, 22.0, 26.0, 31.51, 35.0, 42.0];
-const ANNUAL_PRESETS = [45000, 55000, 65000, 75000, 90000, 110000];
-const BIWEEKLY_PRESETS = [1500, 2000, 2500, 3000, 3500, 4200];
-const HOURS_PRESETS = [35, 36, 37.5, 40];
 
 export const SalaryInputs: React.FC<SalaryInputsProps> = ({
   input,
@@ -48,6 +40,8 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
   const [showAdvancedBenefits, setShowAdvancedBenefits] = useState(input.mode === 'advanced');
 
   const regHours = Math.max(0.5, input.regularHoursPerWeek || 40);
+  const currentEntryMode: SalaryEntryMode = input.entryMode || 'hourly';
+  const currentProvinceInfo = CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC;
 
   const handleRateChange = (val: number) => {
     const safeRate = Math.max(0, val);
@@ -83,7 +77,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
 
   const handleRegularHoursChange = (val: number) => {
     const safeHours = Math.max(0.5, val);
-    let updated = { ...input, regularHoursPerWeek: safeHours };
+    const updated = { ...input, regularHoursPerWeek: safeHours };
     if (input.entryMode === 'annual' && input.annualGrossSalary) {
       updated.hourlyRate = Math.round((input.annualGrossSalary / (safeHours * 52)) * 100) / 100;
     } else if (input.entryMode === 'biweekly' && input.periodGrossSalary) {
@@ -91,6 +85,23 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
     } else {
       updated.annualGrossSalary = Math.round(input.hourlyRate * safeHours * 52);
       updated.periodGrossSalary = Math.round(input.hourlyRate * safeHours * 2 * 100) / 100;
+    }
+    onChange(updated);
+  };
+
+  const handleEntryModeToggle = (mode: SalaryEntryMode) => {
+    const updated = { ...input, entryMode: mode };
+    if (mode === 'annual') {
+      const annual = input.annualGrossSalary || Math.round(input.hourlyRate * regHours * 52);
+      updated.annualGrossSalary = annual;
+      updated.hourlyRate = Math.round((annual / (regHours * 52)) * 100) / 100;
+    } else if (mode === 'biweekly') {
+      const biweekly = input.periodGrossSalary || Math.round(input.hourlyRate * regHours * 2 * 100) / 100;
+      updated.periodGrossSalary = biweekly;
+      updated.hourlyRate = Math.round((biweekly / (regHours * 2)) * 100) / 100;
+    } else {
+      updated.annualGrossSalary = Math.round(input.hourlyRate * regHours * 52);
+      updated.periodGrossSalary = Math.round(input.hourlyRate * regHours * 2 * 100) / 100;
     }
     onChange(updated);
   };
@@ -121,6 +132,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
       overtime20HoursPerWeek: 0,
       frequency: 'biweekly',
       mode: 'simple',
+      province: 'QC',
       shiftPremiumType: 'fixed',
       shiftPremiumAmount: 0,
       healthInsuranceEmployee: 0,
@@ -137,12 +149,10 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
     setShowAdvancedBenefits(false);
   };
 
-  const currentEntryMode = input.entryMode || 'hourly';
-
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 transition-all space-y-5">
-      {/* Top Header with Mode Selector & Reset */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 transition-all space-y-6">
+      {/* 1. Header with Title & Reset Button */}
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <span>⚙️</span>
@@ -156,18 +166,18 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
         <button
           type="button"
           onClick={handleReset}
-          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
-          title="Réinitialiser les valeurs par défaut"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors py-1.5 px-2.5 rounded-lg hover:bg-slate-100 cursor-pointer border border-transparent hover:border-slate-200"
+          title={lang === 'pt' ? 'Restaurar valores padrão' : lang === 'en' ? 'Reset to defaults' : 'Réinitialiser'}
         >
           <RefreshCcw className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Défaut</span>
+          <span>{lang === 'pt' ? 'Padrão' : lang === 'en' ? 'Reset' : 'Défaut'}</span>
         </button>
       </div>
 
-      {/* Province / Territory Selector (All Canada) */}
-      <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200/90 space-y-2">
+      {/* 2. Province / Territory Selector (Clean Institutional Dropdown) */}
+      <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <label htmlFor="province-select" className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-blue-600" />
             <span>
               {lang === 'pt'
@@ -177,46 +187,16 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                 : 'Province ou Territoire'}
             </span>
           </label>
-          <span className="text-[11px] text-slate-500 font-medium">
-            {lang === 'pt' ? 'Salário Mínimo: ' : 'Salaire Min: '}
+          <span className="text-xs text-slate-500 font-medium">
+            {lang === 'pt' ? 'Salário Mínimo: ' : lang === 'en' ? 'Min Wage: ' : 'Salaire Min: '}
             <strong className="text-slate-900 font-bold">
-              ${(CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC).minWageHourly.toFixed(2)}/h
+              ${currentProvinceInfo.minWageHourly.toFixed(2)}/h
             </strong>
           </span>
         </div>
 
-        {/* Quick Province Switcher Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-          {(['QC', 'ON', 'BC', 'AB', 'MB', 'SK', 'NS'] as CanadianProvince[]).map((pCode) => {
-            const isSelected = (input.province || 'QC') === pCode;
-            const pInfo = CANADIAN_PROVINCES[pCode];
-            return (
-              <button
-                key={pCode}
-                type="button"
-                onClick={() => {
-                  const targetThreshold = pInfo.standardOvertimeThresholdHours;
-                  onChange({
-                    ...input,
-                    province: pCode,
-                    // If regular hours is standard 40 and target requires 44 or vice versa, keep user in sync
-                    regularHoursPerWeek: (input.regularHoursPerWeek === 40 || input.regularHoursPerWeek === 44) ? targetThreshold : input.regularHoursPerWeek,
-                  });
-                }}
-                className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 border flex items-center gap-1 ${
-                  isSelected
-                    ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <span>{pInfo.flag}</span>
-                <span>{pCode}</span>
-              </button>
-            );
-          })}
-        </div>
-
         <select
+          id="province-select"
           value={input.province || 'QC'}
           onChange={(e) => {
             const newProv = e.target.value as CanadianProvince;
@@ -224,36 +204,243 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
             onChange({
               ...input,
               province: newProv,
-              regularHoursPerWeek: (input.regularHoursPerWeek === 40 || input.regularHoursPerWeek === 44) ? pInfo.standardOvertimeThresholdHours : input.regularHoursPerWeek,
+              regularHoursPerWeek:
+                input.regularHoursPerWeek === 40 || input.regularHoursPerWeek === 44
+                  ? pInfo.standardOvertimeThresholdHours
+                  : input.regularHoursPerWeek,
             });
           }}
-          className="w-full px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 cursor-pointer"
         >
           {Object.values(CANADIAN_PROVINCES).map((prov) => (
             <option key={prov.code} value={prov.code}>
-              {prov.flag} {prov.name[lang]} ({prov.code}) — {prov.pensionPlan === 'RRQ' ? 'RRQ/RQAP' : 'CPP/AE'} · Heures sup: {prov.standardOvertimeThresholdHours}h
+              {prov.flag} {prov.name[lang]} ({prov.code}) — {prov.pensionPlan === 'RRQ' ? 'RRQ / RQAP' : 'CPP / EI'} · {lang === 'pt' ? 'Carga normal' : lang === 'en' ? 'Normal base' : 'Base normale'}: {prov.standardOvertimeThresholdHours}h/sem
             </option>
           ))}
         </select>
+
         <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
           <span className="line-clamp-1">
-            {(CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC).highlights[lang]}
+            {currentProvinceInfo.highlights[lang]}
           </span>
-          <span className="shrink-0 font-semibold text-blue-700 ml-2">
-            OT 1.5x: após {(CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC).standardOvertimeThresholdHours}h
+          <span className="shrink-0 font-medium text-slate-600 ml-2">
+            {lang === 'pt' ? 'Horas extras 1.5x após ' : lang === 'en' ? 'Overtime 1.5x after ' : 'Heures sup. 1.5x après '}
+            <strong className="text-slate-900 font-bold">
+              {currentProvinceInfo.standardOvertimeThresholdHours}h
+            </strong>
           </span>
         </div>
       </div>
 
-      {/* Mode Selector (Standard vs Talon Réel) & Quick Factory Load */}
-      <div className="space-y-2">
-        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+      {/* 3. Salary Entry Format Tabs */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            {lang === 'pt' ? 'Formato de Remuneração' : lang === 'en' ? 'Pay Rate Format' : 'Format de rémunération'}
+          </label>
+          <span className="text-xs text-blue-700 font-medium">
+            {currentEntryMode === 'hourly'
+              ? (lang === 'pt' ? 'Padrão por hora' : lang === 'en' ? 'Hourly basis' : 'Taux horaire')
+              : (lang === 'pt' ? 'Conversão automática' : lang === 'en' ? 'Auto-converted' : 'Conversion auto')}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 p-1 bg-slate-100 rounded-xl border border-slate-200/80 gap-1">
+          <button
+            type="button"
+            onClick={() => handleEntryModeToggle('hourly')}
+            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+              currentEntryMode === 'hourly'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            {t.entryModeHourly || 'Por Hora ($/h)'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEntryModeToggle('biweekly')}
+            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+              currentEntryMode === 'biweekly'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            {t.entryModeBiweekly || 'Por Quinzena'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEntryModeToggle('annual')}
+            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${
+              currentEntryMode === 'annual'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            {t.entryModeAnnual || 'Por Ano'}
+          </button>
+        </div>
+
+        {/* Primary Salary Input based on Entry Mode */}
+        {currentEntryMode === 'hourly' && (
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <label htmlFor="hourly-rate-input" className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <span>{t.hourlyRateLabel}</span>
+              </label>
+              <span className="text-xs text-slate-500 font-medium">
+                {lang === 'pt' ? 'Mínimo provincial: ' : lang === 'en' ? 'Provincial min: ' : 'Min provincial : '}
+                ${currentProvinceInfo.minWageHourly.toFixed(2)}/h
+              </span>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-lg sm:text-xl">
+                $
+              </div>
+              <input
+                id="hourly-rate-input"
+                type="number"
+                min="0"
+                max="500"
+                step="0.01"
+                value={input.hourlyRate || ''}
+                onChange={(e) => handleRateChange(parseFloat(e.target.value) || 0)}
+                className="block w-full pl-8 sm:pl-10 pr-16 sm:pr-20 py-3 sm:py-3.5 text-xl sm:text-2xl font-black text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all shadow-2xs tabular-nums"
+                placeholder="25.00"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-semibold text-xs sm:text-sm">
+                / {lang === 'pt' ? 'hora' : lang === 'en' ? 'hour' : 'heure'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentEntryMode === 'biweekly' && (
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <label htmlFor="biweekly-gross-input" className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <span>{t.periodGrossLabel}</span>
+              </label>
+              <span className="text-xs text-slate-600 font-semibold">
+                ≈ ${(input.hourlyRate || 0).toFixed(2)}/h
+              </span>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-lg sm:text-xl">
+                $
+              </div>
+              <input
+                id="biweekly-gross-input"
+                type="number"
+                min="0"
+                step="50"
+                value={input.periodGrossSalary || Math.round(input.hourlyRate * regHours * 2)}
+                onChange={(e) => handleBiweeklyGrossChange(parseFloat(e.target.value) || 0)}
+                className="block w-full pl-8 sm:pl-10 pr-24 sm:pr-28 py-3 sm:py-3.5 text-xl sm:text-2xl font-black text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all shadow-2xs tabular-nums"
+                placeholder="2000"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-semibold text-xs sm:text-sm">
+                / {lang === 'pt' ? 'quinzena' : lang === 'en' ? '2-weeks' : 'quinzaine'}
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              💡 {t.derivedHourlyNote} <strong>${(input.hourlyRate || 0).toFixed(2)}/h</strong> ({regHours * 2}h {lang === 'pt' ? 'por quinzena' : lang === 'en' ? 'per pay period' : 'par période'}).
+            </p>
+          </div>
+        )}
+
+        {currentEntryMode === 'annual' && (
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <label htmlFor="annual-gross-input" className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <span>{t.annualGrossLabel}</span>
+              </label>
+              <span className="text-xs text-slate-600 font-semibold">
+                ≈ ${(input.hourlyRate || 0).toFixed(2)}/h
+              </span>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-slate-400 font-bold text-lg sm:text-xl">
+                $
+              </div>
+              <input
+                id="annual-gross-input"
+                type="number"
+                min="0"
+                step="500"
+                value={input.annualGrossSalary || Math.round(input.hourlyRate * regHours * 52)}
+                onChange={(e) => handleAnnualGrossChange(parseFloat(e.target.value) || 0)}
+                className="block w-full pl-8 sm:pl-10 pr-16 sm:pr-20 py-3 sm:py-3.5 text-xl sm:text-2xl font-black text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all shadow-2xs tabular-nums"
+                placeholder="52000"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-semibold text-xs sm:text-sm">
+                / {lang === 'pt' ? 'ano' : lang === 'en' ? 'year' : 'an'}
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              💡 {t.derivedHourlyNote} <strong>${(input.hourlyRate || 0).toFixed(2)}/h</strong> ({regHours}h/semana · 52 semanas).
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 4. Hours per Week Input (Clean, single numerical input without redundant chips) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label htmlFor="regular-hours-input" className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-blue-600" />
+            <span>{t.regularHoursLabel}</span>
+          </label>
+          <span className="text-xs text-slate-500 font-medium">
+            {regHours * 2}h {lang === 'pt' ? 'a cada 2 semanas' : lang === 'en' ? 'per 2 weeks' : 'aux 2 semaines'}
+          </span>
+        </div>
+
+        <div className="relative">
+          <input
+            id="regular-hours-input"
+            type="number"
+            min="1"
+            max="84"
+            step="0.5"
+            value={input.regularHoursPerWeek}
+            onChange={(e) => handleRegularHoursChange(parseFloat(e.target.value) || 0)}
+            className="block w-full pl-4 pr-32 sm:pr-36 py-3 text-lg sm:text-xl font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all shadow-2xs tabular-nums"
+          />
+          <div className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-semibold text-xs sm:text-sm">
+            {lang === 'pt' ? 'horas / semana' : lang === 'en' ? 'hours / week' : 'heures / semaine'}
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-500">
+          {lang === 'pt'
+            ? 'Carga horária comum: 40h (tempo integral padrão), 37.5h ou 35h/semana'
+            : lang === 'en'
+            ? 'Standard schedules: 40h (full-time standard), 37.5h or 35h/week'
+            : 'Horaire standard : 40h (temps plein standard), 37.5h ou 35h/semaine'}
+        </p>
+      </div>
+
+      {/* 5. Calculation Detail Level & Real Leclerc Paystub Example */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            {lang === 'pt' ? 'Nível de Detalhe' : lang === 'en' ? 'Detail Level' : 'Niveau de détail'}
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200/80 gap-1">
           <button
             type="button"
             onClick={() => handleModeChange('simple')}
-            className={`py-1.5 sm:py-2 px-3 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
+            className={`py-2 px-3 text-xs font-bold rounded-lg transition-all text-center cursor-pointer ${
               input.mode === 'simple'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -262,9 +449,9 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
           <button
             type="button"
             onClick={() => handleModeChange('advanced')}
-            className={`py-1.5 sm:py-2 px-3 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 px-3 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               input.mode === 'advanced'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-blue-600 text-white shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -273,237 +460,23 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
           </button>
         </div>
 
-        {/* Quick button to load real Leclerc stub */}
+        {/* 1-Click Real Leclerc Industrial Paystub Example */}
         <button
           type="button"
           onClick={onLoadLeclercExample}
-          className="w-full py-1.5 sm:py-2 px-3 text-xs font-semibold text-blue-700 bg-blue-50/80 hover:bg-blue-100 border border-blue-200/80 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          className="w-full py-2 px-3 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-2xs"
         >
           <Factory className="w-4 h-4 text-blue-600" />
           <span>{t.loadExampleBtn}</span>
         </button>
       </div>
 
-      {/* Input Group based on Entry Mode */}
-      {currentEntryMode === 'hourly' && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="hourly-rate-input" className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 sm:w-5 h-5 text-blue-600" />
-              <span>{t.hourlyRateLabel}</span>
-            </label>
-            <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200/80">
-              {t.minWageBadge}
-            </span>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-extrabold text-xl sm:text-2xl">
-              $
-            </div>
-            <input
-              id="hourly-rate-input"
-              type="number"
-              min="0"
-              max="500"
-              step="0.01"
-              value={input.hourlyRate || ''}
-              onChange={(e) => handleRateChange(parseFloat(e.target.value) || 0)}
-              className="block w-full pl-9 sm:pl-11 pr-14 sm:pr-16 py-2.5 sm:py-3.5 text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 bg-white border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs tabular-nums"
-              placeholder="25.00"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-bold text-xs sm:text-base">
-              / h
-            </div>
-          </div>
-
-          {/* Quick Hourly Presets */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {HOURLY_PRESETS.map((rate) => (
-              <button
-                key={rate}
-                type="button"
-                onClick={() => handleRateChange(rate)}
-                className={`text-xs sm:text-sm px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer active:scale-95 ${
-                  input.hourlyRate === rate
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80'
-                }`}
-              >
-                ${rate.toFixed(2)}/h
-              </button>
-            ))}
-          </div>
-
-          <div className="pt-2">
-            <input
-              type="range"
-              min="15.75"
-              max="90"
-              step="0.25"
-              value={input.hourlyRate || 15.75}
-              onChange={(e) => handleRateChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              aria-label="Ajuster le taux horaire"
-            />
-          </div>
-        </div>
-      )}
-
-      {currentEntryMode === 'annual' && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="annual-gross-input" className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 sm:w-5 h-5 text-blue-600" />
-              <span>{t.annualGrossLabel}</span>
-            </label>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              ${input.hourlyRate.toFixed(2)} / h
-            </span>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-extrabold text-xl sm:text-2xl">
-              $
-            </div>
-            <input
-              id="annual-gross-input"
-              type="number"
-              min="0"
-              step="500"
-              value={input.annualGrossSalary || Math.round(input.hourlyRate * regHours * 52)}
-              onChange={(e) => handleAnnualGrossChange(parseFloat(e.target.value) || 0)}
-              className="block w-full pl-9 sm:pl-11 pr-14 sm:pr-16 py-2.5 sm:py-3.5 text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 bg-white border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs tabular-nums"
-              placeholder="65000"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3.5 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-bold text-xs sm:text-base">
-              / an
-            </div>
-          </div>
-
-          {/* Quick Annual Presets */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {ANNUAL_PRESETS.map((val) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => handleAnnualGrossChange(val)}
-                className="text-xs sm:text-sm px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80 transition-all cursor-pointer active:scale-95"
-              >
-                ${(val / 1000).toFixed(0)}k/an
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-blue-700 font-medium mt-1">
-            💡 {t.derivedHourlyNote} <strong>${input.hourlyRate.toFixed(2)}/h</strong> para uma jornada de {regHours}h/semana.
-          </p>
-        </div>
-      )}
-
-      {currentEntryMode === 'biweekly' && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="biweekly-gross-input" className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 sm:w-5 h-5 text-blue-600" />
-              <span>{t.periodGrossLabel}</span>
-            </label>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              ${input.hourlyRate.toFixed(2)} / h
-            </span>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 font-extrabold text-xl sm:text-2xl">
-              $
-            </div>
-            <input
-              id="biweekly-gross-input"
-              type="number"
-              min="0"
-              step="100"
-              value={input.periodGrossSalary || Math.round(input.hourlyRate * regHours * 2)}
-              onChange={(e) => handleBiweeklyGrossChange(parseFloat(e.target.value) || 0)}
-              className="block w-full pl-9 sm:pl-11 pr-20 sm:pr-24 py-2.5 sm:py-3.5 text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 bg-white border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs tabular-nums"
-              placeholder="2500"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center pointer-events-none text-slate-500 font-bold text-[11px] sm:text-sm">
-              / quinzaine
-            </div>
-          </div>
-
-          {/* Quick Biweekly Presets */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {BIWEEKLY_PRESETS.map((val) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => handleBiweeklyGrossChange(val)}
-                className="text-xs sm:text-sm px-3 py-1.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80 transition-all cursor-pointer active:scale-95"
-              >
-                ${val}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-blue-700 font-medium mt-1">
-            💡 {t.derivedHourlyNote} <strong>${input.hourlyRate.toFixed(2)}/h</strong> para {regHours * 2}h aux 2 semaines.
-          </p>
-        </div>
-      )}
-
-      {/* 2. Horas de trabalho regulares */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label htmlFor="regular-hours-input" className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-            <Clock className="w-4 h-4 sm:w-5 h-5 text-blue-600" />
-            <span>{t.regularHoursLabel}</span>
-          </label>
-          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
-            {regHours}h / sem ({regHours * 2}h / quinzena)
-          </span>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              id="regular-hours-input"
-              type="number"
-              min="1"
-              max="84"
-              step="0.5"
-              value={input.regularHoursPerWeek}
-              onChange={(e) => handleRegularHoursChange(parseFloat(e.target.value) || 0)}
-              className="block w-full px-4 py-2.5 sm:py-3 font-extrabold text-slate-900 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-lg tabular-nums"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500 font-bold text-xs sm:text-sm">
-              h / sem
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {HOURS_PRESETS.map((hrs) => (
-              <button
-                key={hrs}
-                type="button"
-                onClick={() => handleRegularHoursChange(hrs)}
-                className={`text-xs sm:text-sm px-3.5 py-2 sm:py-2.5 rounded-xl font-bold transition-all cursor-pointer active:scale-95 ${
-                  input.regularHoursPerWeek === hrs
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80'
-                }`}
-              >
-                {hrs}h
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Section Horas Extras Opcionais */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/40">
+      {/* 6. Overtime Section (Optional Collapsible) */}
+      <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
         <button
           type="button"
           onClick={() => setShowOvertime(!showOvertime)}
-          className="w-full px-3.5 py-2.5 text-left flex items-center justify-between text-xs font-semibold text-slate-800 hover:bg-slate-100/70 transition-colors cursor-pointer"
+          className="w-full px-4 py-2.5 text-left flex items-center justify-between text-xs font-bold text-slate-800 hover:bg-slate-100/70 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <PlusCircle className="w-4 h-4 text-blue-600" />
@@ -518,14 +491,14 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
         </button>
 
         {showOvertime && (
-          <div className="p-3.5 pt-1 space-y-3 border-t border-slate-200/60 bg-white">
+          <div className="p-4 pt-1 space-y-3 border-t border-slate-200/60 bg-white">
             <p className="text-[11px] text-slate-500">
               {t.overtimeSubtitle}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   {t.overtime15Label}
                 </label>
                 <div className="relative">
@@ -536,7 +509,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.5"
                     value={input.overtime15HoursPerWeek}
                     onChange={(e) => handleOt15Change(parseFloat(e.target.value) || 0)}
-                    className="block w-full px-3 py-1.5 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="block w-full px-3 py-2 text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-600"
                     placeholder="0"
                   />
                   <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400 text-xs">
@@ -546,7 +519,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   {t.overtime20Label}
                 </label>
                 <div className="relative">
@@ -557,7 +530,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.5"
                     value={input.overtime20HoursPerWeek}
                     onChange={(e) => handleOt20Change(parseFloat(e.target.value) || 0)}
-                    className="block w-full px-3 py-1.5 text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="block w-full px-3 py-2 text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-600"
                     placeholder="0"
                   />
                   <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400 text-xs">
@@ -570,13 +543,13 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
         )}
       </div>
 
-      {/* 4. Section Mode Avancé: Primes, Assurances, Cafeteria */}
+      {/* 7. Advanced Benefits & Deductions Section */}
       {input.mode === 'advanced' && (
         <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/20">
           <button
             type="button"
             onClick={() => setShowAdvancedBenefits(!showAdvancedBenefits)}
-            className="w-full px-3.5 py-2.5 text-left flex items-center justify-between text-xs font-bold text-blue-900 bg-blue-50/60 hover:bg-blue-100/60 transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 text-left flex items-center justify-between text-xs font-bold text-blue-900 bg-blue-50/60 hover:bg-blue-100/60 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <ShieldPlus className="w-4 h-4 text-blue-600" />
@@ -586,12 +559,12 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
           </button>
 
           {showAdvancedBenefits && (
-            <div className="p-3.5 pt-2 space-y-4 bg-white border-t border-blue-100">
+            <div className="p-4 pt-2 space-y-4 bg-white border-t border-blue-100">
               <p className="text-[11px] text-slate-500">
                 {t.advancedSectionSubtitle}
               </p>
 
-              {/* Prime de Quart / Prime 36-40 */}
+              {/* Prime de Quart / Adicional de Turno */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs sm:text-sm font-bold text-slate-800">
@@ -601,16 +574,20 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     <button
                       type="button"
                       onClick={() => onChange({ ...input, shiftPremiumType: 'hourly' })}
-                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${input.shiftPremiumType === 'hourly' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600'}`}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        input.shiftPremiumType === 'hourly' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600'
+                      }`}
                     >
                       $/h
                     </button>
                     <button
                       type="button"
                       onClick={() => onChange({ ...input, shiftPremiumType: 'fixed' })}
-                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${input.shiftPremiumType === 'fixed' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600'}`}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        input.shiftPremiumType === 'fixed' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600'
+                      }`}
                     >
-                      $ fixe
+                      $ {lang === 'pt' ? 'fixo' : lang === 'en' ? 'fixed' : 'fixe'}
                     </button>
                   </div>
                 </div>
@@ -622,7 +599,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.01"
                     value={input.shiftPremiumAmount || ''}
                     onChange={(e) => onChange({ ...input, shiftPremiumAmount: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                     placeholder="ex: 3.50 $/h ou 252.08 $ fixe"
                   />
                 </div>
@@ -631,7 +608,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
               {/* Assurance Médicale (Part Employé) */}
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-bold text-slate-800 block">
-                  {t.groupHealthInsLabel} ($ / quinzaine)
+                  {t.groupHealthInsLabel} ($ / quinzena)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-sm">$</span>
@@ -641,7 +618,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.01"
                     value={input.healthInsuranceEmployee || ''}
                     onChange={(e) => onChange({ ...input, healthInsuranceEmployee: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                     placeholder="74.28"
                   />
                 </div>
@@ -650,7 +627,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
               {/* Assurance Vie & Accident (Part Employé) */}
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-bold text-slate-800 block">
-                  {t.lifeAccidentInsLabel} ($ / quinzaine)
+                  {t.lifeAccidentInsLabel} ($ / quinzena)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-sm">$</span>
@@ -660,7 +637,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.01"
                     value={input.lifeAndDisabilityInsuranceEmployee || ''}
                     onChange={(e) => onChange({ ...input, lifeAndDisabilityInsuranceEmployee: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                     placeholder="16.30"
                   />
                 </div>
@@ -684,7 +661,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.01"
                     value={input.employerTaxableBenefits || ''}
                     onChange={(e) => onChange({ ...input, employerTaxableBenefits: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                     placeholder="56.13"
                   />
                 </div>
@@ -696,7 +673,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
               {/* Cafeteria & factory store */}
               <div className="space-y-1.5">
                 <label className="text-xs sm:text-sm font-bold text-slate-800 block">
-                  {t.cafeteriaLabel} ($ / quinzaine)
+                  {t.cafeteriaLabel} ($ / quinzena)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-sm">$</span>
@@ -706,7 +683,7 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
                     step="0.01"
                     value={input.otherDeductionsPerPay || ''}
                     onChange={(e) => onChange({ ...input, otherDeductionsPerPay: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-8 pr-3.5 py-2.5 text-sm sm:text-base font-semibold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                     placeholder="9.00"
                   />
                 </div>
@@ -716,20 +693,21 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
         </div>
       )}
 
+      {/* 8. Professional Calculation Action Button */}
       {onCalculate && (
-        <div className="pt-4 border-t border-slate-200/90 mt-2">
+        <div className="pt-2">
           <button
             type="button"
             onClick={onCalculate}
-            className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 text-white rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg transition-all cursor-pointer group"
+            className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 text-white rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.99]"
           >
-            <Calculator className="w-5 h-5 text-blue-200 group-hover:scale-110 transition-transform" />
+            <Calculator className="w-5 h-5 text-blue-200 group-hover:scale-105 transition-transform" />
             <span>
               {lang === 'pt'
-                ? 'Calcular Salário Líquido e Ver Deduções'
+                ? 'Ver Detalhamento Completo do Salário'
                 : lang === 'en'
-                ? 'Calculate Net Pay & View Deductions'
-                : 'Calculer le salaire net et voir les retenues'}
+                ? 'View Full Paystub Breakdown'
+                : 'Voir le relevé de paie complet'}
             </span>
             <ArrowRight className="w-4 h-4 text-blue-200 group-hover:translate-x-1 transition-transform" />
           </button>

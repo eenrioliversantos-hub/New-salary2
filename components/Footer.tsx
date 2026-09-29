@@ -13,6 +13,8 @@ import {
   Award,
   Lock,
   Megaphone,
+  Crown,
+  Building2,
 } from 'lucide-react';
 
 interface FooterProps {
@@ -84,6 +86,15 @@ export const Footer: React.FC<FooterProps> = ({
                   {lang === 'pt' ? 'Comparador de Empregos' : 'Comparateur d’Emplois'}
                 </button>
               </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onSelectTool && onSelectTool('scenarios')}
+                  className="hover:text-blue-600 font-medium transition-colors cursor-pointer text-left"
+                >
+                  {lang === 'pt' ? 'Cenários & Estudo de Caso' : 'Scénarios & Étude Leclerc'}
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -92,6 +103,16 @@ export const Footer: React.FC<FooterProps> = ({
               🚀 {lang === 'pt' ? 'Carreira & RH' : 'Carrière & Embauche'}
             </span>
             <ul className="space-y-1.5 text-slate-600">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onSelectTool && onSelectTool('pro-plans')}
+                  className="hover:text-indigo-600 font-bold transition-colors cursor-pointer text-left flex items-center gap-1.5 text-indigo-700"
+                >
+                  <Crown className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>{lang === 'pt' ? 'Carrière Pro & Planos' : 'Carrière Pro & Forfaits'}</span>
+                </button>
+              </li>
               <li>
                 <button
                   type="button"
@@ -130,6 +151,16 @@ export const Footer: React.FC<FooterProps> = ({
               <li>
                 <button
                   type="button"
+                  onClick={() => onSelectTool && onSelectTool('ebook-store')}
+                  className="hover:text-amber-700 font-bold transition-colors cursor-pointer text-left flex items-center gap-1 text-amber-900"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{lang === 'pt' ? 'Guia Definitivo & E-books' : 'Guide Ultime & E-books'}</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
                   onClick={() => onSelectTool && onSelectTool('blog')}
                   className="hover:text-amber-700 font-bold transition-colors cursor-pointer text-left flex items-center gap-1"
                 >
@@ -137,18 +168,6 @@ export const Footer: React.FC<FooterProps> = ({
                   <span>{lang === 'pt' ? 'Blog & Artigos' : 'Blog & Articles'}</span>
                 </button>
               </li>
-              {onOpenEbookModal && (
-                <li>
-                  <button
-                    type="button"
-                    onClick={onOpenEbookModal}
-                    className="hover:text-amber-700 font-bold transition-colors cursor-pointer text-left flex items-center gap-1 text-amber-900"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{lang === 'pt' ? 'Central de E-books & Materiais' : 'E-books & Ressources'}</span>
-                  </button>
-                </li>
-              )}
               <li>
                 <button
                   type="button"
@@ -182,6 +201,16 @@ export const Footer: React.FC<FooterProps> = ({
               ))}
             </ul>
             <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              {onSelectTool && (
+                <button
+                  type="button"
+                  onClick={() => onSelectTool('partners')}
+                  className="hover:text-emerald-700 font-bold transition-colors cursor-pointer text-left flex items-center gap-1.5 text-emerald-900 text-[11px]"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>{lang === 'pt' ? 'Programa de Patrocinadores' : 'Programme Commanditaires'}</span>
+                </button>
+              )}
               {onSelectTool && (
                 <button
                   type="button"

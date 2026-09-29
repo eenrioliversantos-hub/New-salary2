@@ -15,6 +15,7 @@ import {
   Cpu,
   ArrowRight,
   HelpCircle,
+  Lock,
 } from 'lucide-react';
 
 interface QuizQuestion {
@@ -262,6 +263,10 @@ export const TechnicalTestsSimulator: React.FC<TechnicalTestsSimulatorProps> = (
           <button
             type="button"
             onClick={() => {
+              if (!isPro) {
+                onOpenProModal('excel');
+                return;
+              }
               setSelectedCategory('excel');
               handleRestart();
             }}
@@ -273,11 +278,16 @@ export const TechnicalTestsSimulator: React.FC<TechnicalTestsSimulatorProps> = (
           >
             <Table className="w-3.5 h-3.5" />
             <span>Excel & Bureautique Pratique</span>
+            {!isPro && <Lock className="w-3 h-3 text-slate-400" />}
           </button>
 
           <button
             type="button"
             onClick={() => {
+              if (!isPro) {
+                onOpenProModal('logic');
+                return;
+              }
               setSelectedCategory('logic');
               handleRestart();
             }}
@@ -289,6 +299,7 @@ export const TechnicalTestsSimulator: React.FC<TechnicalTestsSimulatorProps> = (
           >
             <Cpu className="w-3.5 h-3.5" />
             <span>Logique & Mesures (Pouces / Cadence)</span>
+            {!isPro && <Lock className="w-3 h-3 text-slate-400" />}
           </button>
         </div>
       </div>
