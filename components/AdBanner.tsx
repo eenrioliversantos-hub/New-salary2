@@ -123,6 +123,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   }, [isPreviewMode, adSlot, houseAdsSponsor]);
 
   const isInternalDestination = Boolean(activeSponsor?.linkUrl?.startsWith('#'));
+  const destinationLabel = isInternalDestination ? 'Abrir conteúdo no PaieNet' : 'Abrir anúncio em nova aba';
 
   // Record impression on mount (only in live mode, not preview)
   useEffect(() => {
@@ -292,6 +293,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
             target={isInternalDestination ? undefined : '_blank'}
             rel={isInternalDestination ? undefined : 'noopener noreferrer'}
             onClick={handleSponsorClick}
+            aria-label={`${sponsor.headline}. ${destinationLabel}`}
             className={`group block w-full p-3 sm:py-2.5 sm:px-5 border rounded-2xl shadow-sm transition-all text-white cursor-pointer ${getThemeClasses(
               sponsor.themeGradient
             )}`}
@@ -359,6 +361,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
             target={isInternalDestination ? undefined : '_blank'}
             rel={isInternalDestination ? undefined : 'noopener noreferrer'}
             onClick={handleSponsorClick}
+            aria-label={`${sponsor.headline}. ${destinationLabel}`}
             className={`group block w-full p-5 sm:p-6 border rounded-2xl shadow-sm transition-all text-white space-y-3 cursor-pointer ${getThemeClasses(
               sponsor.themeGradient
             )}`}
@@ -420,6 +423,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
           target={isInternalDestination ? undefined : '_blank'}
           rel={isInternalDestination ? undefined : 'noopener noreferrer'}
           onClick={handleSponsorClick}
+          aria-label={`${sponsor.headline}. ${destinationLabel}`}
           className={`group block w-full p-4 sm:p-5 border rounded-2xl shadow-sm transition-all text-white cursor-pointer ${getThemeClasses(
             sponsor.themeGradient
           )}`}
