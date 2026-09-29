@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TaxInput } from '@/lib/tax-engine';
+import { TaxInput, CanadianProvince, CANADIAN_PROVINCES } from '@/lib/tax-engine';
 import { Language, translations } from '@/lib/i18n';
 import {
   DollarSign,
@@ -18,6 +18,7 @@ import {
   HelpCircle,
   ArrowRight,
   Calculator,
+  MapPin,
 } from 'lucide-react';
 
 interface SalaryInputsProps {
@@ -161,6 +162,87 @@ export const SalaryInputs: React.FC<SalaryInputsProps> = ({
           <RefreshCcw className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Défaut</span>
         </button>
+      </div>
+
+      {/* Province / Territory Selector (All Canada) */}
+      <div className="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200/90 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-blue-600" />
+            <span>
+              {lang === 'pt'
+                ? 'Província ou Território do Canadá'
+                : lang === 'en'
+                ? 'Province or Territory'
+                : 'Province ou Territoire'}
+            </span>
+          </label>
+          <span className="text-[11px] text-slate-500 font-medium">
+            {lang === 'pt' ? 'Salário Mínimo: ' : 'Salaire Min: '}
+            <strong className="text-slate-900 font-bold">
+              ${(CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC).minWageHourly.toFixed(2)}/h
+            </strong>
+          </span>
+        </div>
+
+        {/* Quick Province Switcher Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {(['QC', 'ON', 'BC', 'AB', 'MB', 'SK', 'NS'] as CanadianProvince[]).map((pCode) => {
+            const isSelected = (input.province || 'QC') === pCode;
+            const pInfo = CANADIAN_PROVINCES[pCode];
+            return (
+              <button
+                key={pCode}
+                type="button"
+                onClick={() => {
+                  const targetThreshold = pInfo.standardOvertimeThresholdHours;
+                  onChange({
+                    ...input,
+                    province: pCode,
+                    // If regular hours is standard 40 and target requires 44 or vice versa, keep user in sync
+                    regularHoursPerWeek: (input.regularHoursPerWeek === 40 || input.regularHoursPerWeek === 44) ? targetThreshold : input.regularHoursPerWeek,
+                  });
+                }}
+                className={`py-1 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 border flex items-center gap-1 ${
+                  isSelected
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <span>{pInfo.flag}</span>
+                <span>{pCode}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <select
+          value={input.province || 'QC'}
+          onChange={(e) => {
+            const newProv = e.target.value as CanadianProvince;
+            const pInfo = CANADIAN_PROVINCES[newProv] || CANADIAN_PROVINCES.QC;
+            onChange({
+              ...input,
+              province: newProv,
+              regularHoursPerWeek: (input.regularHoursPerWeek === 40 || input.regularHoursPerWeek === 44) ? pInfo.standardOvertimeThresholdHours : input.regularHoursPerWeek,
+            });
+          }}
+          className="w-full px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        >
+          {Object.values(CANADIAN_PROVINCES).map((prov) => (
+            <option key={prov.code} value={prov.code}>
+              {prov.flag} {prov.name[lang]} ({prov.code}) — {prov.pensionPlan === 'RRQ' ? 'RRQ/RQAP' : 'CPP/AE'} · Heures sup: {prov.standardOvertimeThresholdHours}h
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+          <span className="line-clamp-1">
+            {(CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC).highlights[lang]}
+          </span>
+          <span className="shrink-0 font-semibold text-blue-700 ml-2">
+            OT 1.5x: após {(CANADIAN_PROVINCES[input.province || 'QC'] || CANADIAN_PROVINCES.QC).standardOvertimeThresholdHours}h
+          </span>
+        </div>
       </div>
 
       {/* Mode Selector (Standard vs Talon Réel) & Quick Factory Load */}

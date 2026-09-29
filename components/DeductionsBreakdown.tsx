@@ -68,7 +68,12 @@ export const DeductionsBreakdown: React.FC<DeductionsBreakdownProps> = ({ calc, 
   const totalInsuranceAndBenefits =
     selectedPeriod.groupInsurance + selectedPeriod.retirementAndUnion + selectedPeriod.otherDeductions;
 
-  // Donut slices
+  // Donut slices adapted dynamically to Canadian province
+  const isQuebec = (calc.province || 'QC') === 'QC';
+  const provName = calc.provinceInfo?.name?.[lang] || 'Provincial';
+  const pensionLabel = calc.provinceInfo?.pensionPlan === 'RRQ' ? 'RRQ (Régime des rentes)' : 'CPP (Canada Pension Plan / RPC)';
+  const eiLabel = isQuebec ? 'AE (Assurance-Emploi 1,32%)' : 'AE / EI (Assurance-Emploi 1,64%)';
+
   const chartData: ChartSliceData[] = [
     {
       name: lang === 'pt' ? 'Salário Líquido' : lang === 'en' ? 'Net Take-Home' : 'Salaire Net en poche',
@@ -78,41 +83,44 @@ export const DeductionsBreakdown: React.FC<DeductionsBreakdownProps> = ({ calc, 
       percentageOfGross: (selectedPeriod.net / gross) * 100,
     },
     {
-      name: 'Revenu Québec (Provincial)',
+      name: isQuebec ? 'Revenu Québec (Provincial)' : `${provName} (Impôt Provincial)`,
       category: 'taxes',
       value: selectedPeriod.provincialTax,
       color: '#2563eb', // Blue
       percentageOfGross: (selectedPeriod.provincialTax / gross) * 100,
     },
     {
-      name: 'CRA / ARC (Fédéral)',
+      name: isQuebec ? 'CRA / ARC (Fédéral -16.5% QC)' : 'CRA / ARC (Fédéral)',
       category: 'taxes',
       value: selectedPeriod.federalTax,
       color: '#0284c7', // Sky
       percentageOfGross: (selectedPeriod.federalTax / gross) * 100,
     },
     {
-      name: 'RRQ (Régime des rentes)',
+      name: pensionLabel,
       category: 'social',
       value: selectedPeriod.rrq,
       color: '#4f46e5', // Indigo
       percentageOfGross: (selectedPeriod.rrq / gross) * 100,
     },
     {
-      name: 'AE (Assurance-Emploi)',
+      name: eiLabel,
       category: 'social',
       value: selectedPeriod.ae,
       color: '#d97706', // Amber
       percentageOfGross: (selectedPeriod.ae / gross) * 100,
     },
-    {
-      name: 'RQAP (Parental)',
+  ];
+
+  if (selectedPeriod.rqap > 0) {
+    chartData.push({
+      name: 'RQAP (Régime québécois d’assurance parentale)',
       category: 'social',
       value: selectedPeriod.rqap,
       color: '#9333ea', // Purple
       percentageOfGross: (selectedPeriod.rqap / gross) * 100,
-    },
-  ];
+    });
+  }
 
   if (selectedPeriod.groupInsurance > 0) {
     chartData.push({

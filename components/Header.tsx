@@ -48,6 +48,7 @@ interface HeaderProps {
   isPro?: boolean;
   onOpenProModal?: (trigger?: string) => void;
   onOpenEbookModal?: () => void;
+  onSelectB2bTab?: (tab: 'catalog' | 'sponsorship' | 'jobs' | 'map') => void;
 }
 
 type DropdownId = 'calculators' | 'career' | 'content' | 'business' | 'language' | null;
@@ -154,6 +155,16 @@ const HEADER_I18N = {
       fr: 'Comparez l’Offre A vs l’Offre B au net',
       pt: 'Compare Oferta A vs Proposta B no bolso',
       en: 'Compare Offer A vs Offer B in net take-home',
+    },
+    provincesTitle: {
+      fr: 'Salaires dans les 13 Provinces',
+      pt: 'Salário nas 13 Províncias do Canadá',
+      en: 'Salaries in All 13 Provinces',
+    },
+    provincesDesc: {
+      fr: 'Québec vs Ontario vs Alberta vs Colombie-Britannique',
+      pt: 'Québec vs Ontário vs Alberta vs BC e poder de compra',
+      en: 'Quebec vs Ontario vs Alberta vs BC net take-home',
     },
     overtimeTitle: {
       fr: 'Heures Supplémentaires (1,5× / 2,0×)',
@@ -316,6 +327,16 @@ const HEADER_I18N = {
       pt: 'Atração de talentos de alta qualificação no Québec',
       en: 'Targeted hiring for skilled workers across Québec',
     },
+    spacesMapTitle: {
+      fr: 'Plan Interactif des Espaces Publicitaires',
+      pt: 'Mapa Interativo de Espaços Publicitários',
+      en: 'Interactive Ad Placement Blueprint',
+    },
+    spacesMapDesc: {
+      fr: 'Inventaire en direct de tous les emplacements disponibles',
+      pt: 'Menu dinâmico com todas as vitrines disponíveis no portal',
+      en: 'Live blueprint of all available portal advertising spaces',
+    },
   },
   languageMenu: {
     label: {
@@ -405,6 +426,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleNavClick = (toolId: ToolId) => {
     onSelectTool(toolId);
+    setActiveDropdown(null);
+    setIsMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleB2bClick = (subTab: 'catalog' | 'sponsorship' | 'jobs' | 'map') => {
+    onSelectTool('media-kit');
+    onSelectB2bTab?.(subTab);
     setActiveDropdown(null);
     setIsMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -583,6 +612,26 @@ export const Header: React.FC<HeaderProps> = ({
                               </span>
                               <span className="text-[11px] text-slate-500 font-normal leading-tight block">
                                 {HEADER_I18N.calculators.compareDesc[lang]}
+                              </span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleNavClick('canada-provinces')}
+                            className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                              activeTool === 'canada-provinces' ? 'bg-blue-50 text-blue-900' : 'hover:bg-slate-50 text-slate-800'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                              <MapPin className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold block text-slate-900 group-hover:text-blue-700">
+                                {HEADER_I18N.calculators.provincesTitle[lang]}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                                {HEADER_I18N.calculators.provincesDesc[lang]}
                               </span>
                             </div>
                           </button>
@@ -839,6 +888,31 @@ export const Header: React.FC<HeaderProps> = ({
 
                       <button
                         type="button"
+                        onClick={() => handleNavClick('resources')}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                          activeTool === 'resources' ? 'bg-emerald-50 text-emerald-900' : 'hover:bg-slate-50 text-slate-800'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold block text-slate-900 group-hover:text-emerald-700">
+                              {lang === 'pt' ? 'Acervo de Guias & Infoprodutos' : lang === 'en' ? 'Guides & Downloads Library' : 'Centre de Guides & Téléchargements'}
+                            </span>
+                            <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded">
+                              Hub
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                            {lang === 'pt' ? 'E-books, modelos de CV, planilhas e checklists' : 'E-books, ATS resumes, budget sheets and checklists'}
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => handleNavClick('blog')}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
                           activeTool === 'blog' ? 'bg-blue-50 text-blue-900' : 'hover:bg-slate-50 text-slate-800'
@@ -951,7 +1025,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => handleNavClick('media-kit')}
+                        onClick={() => handleB2bClick('catalog')}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
                           activeTool === 'media-kit' ? 'bg-blue-50 text-blue-900' : 'hover:bg-slate-50 text-slate-800'
                         }`}
@@ -971,7 +1045,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => handleNavClick('media-kit')}
+                        onClick={() => handleB2bClick('sponsorship')}
                         className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left hover:bg-slate-50 transition-colors cursor-pointer group"
                       >
                         <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-purple-600 group-hover:text-white transition-colors">
@@ -989,11 +1063,11 @@ export const Header: React.FC<HeaderProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => handleNavClick('media-kit')}
+                        onClick={() => handleB2bClick('jobs')}
                         className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left hover:bg-slate-50 transition-colors cursor-pointer group"
                       >
                         <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                          <Zap className="w-4 h-4" />
+                          <Briefcase className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
                           <span className="text-xs font-semibold block text-slate-900 group-hover:text-emerald-700">
@@ -1001,6 +1075,29 @@ export const Header: React.FC<HeaderProps> = ({
                           </span>
                           <span className="text-[11px] text-slate-500 font-normal leading-tight block">
                             {HEADER_I18N.business.jobsDesc[lang]}
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleB2bClick('map')}
+                        className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left hover:bg-slate-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <Map className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-slate-900 group-hover:text-indigo-700">
+                              {HEADER_I18N.business.spacesMapTitle[lang]}
+                            </span>
+                            <span className="text-[9px] font-bold bg-indigo-100 text-indigo-800 px-1 py-0.2 rounded">
+                              Ao Vivo
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-normal leading-tight block">
+                            {HEADER_I18N.business.spacesMapDesc[lang]}
                           </span>
                         </div>
                       </button>

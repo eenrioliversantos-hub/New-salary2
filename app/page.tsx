@@ -37,6 +37,9 @@ import { EbookModal } from '@/components/EbookModal';
 import { NewsletterBox } from '@/components/NewsletterBox';
 import { AdminPanel } from '@/components/AdminPanel';
 import { AdBanner } from '@/components/AdBanner';
+import { InterprovincialSalaryComparator } from '@/components/InterprovincialSalaryComparator';
+import { ResourceHubSection } from '@/components/ResourceHubSection';
+import { B2BTab } from '@/components/CommercialShowcase';
 import { adminStore } from '@/lib/admin-store';
 import {
   Calculator,
@@ -67,6 +70,7 @@ export default function HomePage() {
   const [isEbookModalOpen, setIsEbookModalOpen] = useState(false);
   const [selectedEbookAssetId, setSelectedEbookAssetId] = useState<string | undefined>(undefined);
   const [selectedBlogArticleId, setSelectedBlogArticleId] = useState<string | null>(null);
+  const [b2bTab, setB2bTab] = useState<B2BTab>('catalog');
 
   const handleOpenEbookModal = (assetId?: string) => {
     setSelectedEbookAssetId(assetId);
@@ -274,6 +278,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
         isPro={isPro}
         onOpenProModal={handleOpenProModal}
         onOpenEbookModal={handleOpenEbookModal}
+        onSelectB2bTab={(tab) => setB2bTab(tab)}
       />
 
       {/* Strategic Top Leaderboard Ad Banner (Mapped to home-top) */}
@@ -499,6 +504,59 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
             </motion.div>
           )}
 
+          {/* TOOL 5.1: INTERPROVINCIAL SALARY & PURCHASING POWER COMPARATOR */}
+          {activeTool === 'canada-provinces' && (
+            <motion.div
+              key="canada-provinces-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <InterprovincialSalaryComparator
+                lang={lang}
+                onSelectTool={handleSelectTool}
+                onLoadProvinceToMainCalc={(prov, rate, hours) => {
+                  setInput((prev) => ({
+                    ...prev,
+                    province: prov,
+                    hourlyRate: rate,
+                    regularHoursPerWeek: hours,
+                    annualGrossSalary: Math.round(rate * hours * 52),
+                    periodGrossSalary: Math.round(rate * hours * 2 * 100) / 100,
+                  }));
+                  setActiveTool('net-calc');
+                  setNetCalcView('workspace');
+                  setToastMessage(
+                    lang === 'pt'
+                      ? `Província alterada para ${prov} ($${rate.toFixed(2)}/h) no calculador principal!`
+                      : `Province mise à jour vers ${prov} (${rate.toFixed(2)}$/h) !`
+                  );
+                  setTimeout(() => setToastMessage(null), 3500);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            </motion.div>
+          )}
+
+          {/* TOOL 5.2: DEDICATED RESOURCE & KNOWLEDGE HUB */}
+          {activeTool === 'resources' && (
+            <motion.div
+              key="resources-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <ResourceHubSection
+                lang={lang}
+                onSelectTool={handleSelectTool}
+                onOpenEbookModal={handleOpenEbookModal}
+                onOpenProModal={handleOpenProModal}
+              />
+            </motion.div>
+          )}
+
           {/* TOOL 6: VACATION & HOLIDAYS */}
           {activeTool === 'vacation-holidays' && (
             <motion.div
@@ -607,6 +665,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                 lang={lang}
                 onSelectTool={handleSelectTool}
                 onOpenProModal={() => handleOpenProModal('media-kit')}
+                initialTab={b2bTab}
               />
             </motion.div>
           )}

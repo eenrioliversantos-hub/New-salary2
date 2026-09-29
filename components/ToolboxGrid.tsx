@@ -21,6 +21,8 @@ import {
   BookOpen,
   Megaphone,
   Building2,
+  MapPin,
+  FolderOpen,
 } from 'lucide-react';
 
 export type ToolId =
@@ -29,6 +31,8 @@ export type ToolId =
   | 'raise'
   | 'overtime'
   | 'compare-jobs'
+  | 'canada-provinces'
+  | 'resources'
   | 'vacation-holidays'
   | 'rrsp-savings'
   | 'factory-stub'
@@ -91,6 +95,22 @@ export const ToolboxGrid: React.FC<ToolboxGridProps> = ({
       icon: Scale,
       color: 'violet',
       badge: lang === 'pt' ? 'Decisivo' : lang === 'en' ? 'Match' : 'Nouveau',
+    },
+    {
+      id: 'canada-provinces' as ToolId,
+      name: lang === 'pt' ? 'Salário em Outras Províncias' : lang === 'en' ? 'Canada Provinces Salary' : 'Salaires dans les autres provinces',
+      desc: lang === 'pt' ? 'Compare seu salário líquido no Québec com Ontário, Alberta, BC e todas as 13 províncias' : lang === 'en' ? 'Compare net salary and purchasing power across all 10 provinces & 3 territories' : 'Comparez votre salaire net et coût de la vie dans les 13 provinces et territoires',
+      icon: MapPin,
+      color: 'blue',
+      badge: lang === 'pt' ? 'Todas Províncias' : lang === 'en' ? 'All Canada' : 'Tout le Canada',
+    },
+    {
+      id: 'resources' as ToolId,
+      name: lang === 'pt' ? 'Guias & Recursos (Acervo)' : lang === 'en' ? 'Guides & Resources' : 'Guides & Ressources',
+      desc: lang === 'pt' ? 'Área dedicada a e-books, modelos de currículo ATS, planilhas orçamentárias e checklists' : lang === 'en' ? 'Dedicated library of handbooks, ATS resume templates, and financial guides' : 'Centre dédié de manuels officiels, modèles de CV ATS et outils à télécharger',
+      icon: FolderOpen,
+      color: 'emerald',
+      badge: lang === 'pt' ? 'Acervo Oficial' : lang === 'en' ? 'Hub' : 'Nouveau Centre',
     },
     {
       id: 'vacation-holidays' as ToolId,

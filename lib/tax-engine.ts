@@ -1,29 +1,36 @@
 /**
- * Quebec Payroll & Tax Calculation Engine (2025/2026 Fiscal Rules)
- * 
- * Rules modeled:
- * 1. Federal Tax (CRA / ARC) with 16.5% Quebec Abatement (Abattement remboursable du Québec).
- * 2. Quebec Provincial Income Tax (Revenu Québec) with 14% basic tax rate & tax credits.
- * 3. RRQ (Régime de rentes du Québec) base + additional plan 1 + plan 2.
- * 4. RQAP (Régime québécois d'assurance parentale).
- * 5. AE (Assurance-Emploi) at Quebec-specific reduced rate (1.32%).
- * 6. Advanced Workplace Deductions:
- *    - Shift & hourly premiums (Prime de quart / Prime 36-40 / Prime de nuit)
- *    - Group Insurance: Health (Assurance médicale), Dental (Dentaire), Life & Accident (Vie & accident)
- *    - Taxable Employer Benefits (Avantages imposables employeur - Case J RL-1 au Québec)
- *    - Group RRSP / Pension (REER collectif)
- *    - Union dues (Cotisation syndicale)
- *    - Cafeteria & miscellaneous payroll deductions
+ * Enhanced Multi-Jurisdiction Payroll & Tax Calculation Engine (All Canada 2025/2026)
+ *
+ * Expands beyond Quebec to support all 10 provinces & 3 territories:
+ * - QC: Revenu Québec (14%-25.75%), 16.5% Quebec Federal Abatement, RRQ (6.40% + 4%), RQAP (0.494%), reduced EI (1.32%)
+ * - ON: Ontario Tax (5.05%-13.16%), Ontario Surtax (20%/36%), Ontario Health Premium ($0-$900), standard CPP & EI (1.64%)
+ * - BC: BC Tax (5.06%-20.5%), standard CPP & EI
+ * - AB: Alberta Tax (10%-15%), zero sales tax, high BPA, standard CPP & EI
+ * - MB, SK, NS, NB, NL, PE, YT, NT, NU: respective provincial tax brackets, BPA, and rules
  */
+
+import {
+  CanadianProvince,
+  CANADIAN_PROVINCES,
+  CANADA_FISCAL_RULES,
+  ALL_CANADA_CONSTANTS,
+  ProvinceInfo,
+} from './canada-tax-provinces';
+
+export type { CanadianProvince, ProvinceInfo };
+export { CANADIAN_PROVINCES, CANADA_FISCAL_RULES, ALL_CANADA_CONSTANTS };
 
 export type PayFrequency = 'hourly' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'annually';
 export type SalaryEntryMode = 'hourly' | 'annual' | 'biweekly' | 'monthly';
 
 export interface TaxInput {
+  // Jurisdiction (Defaults to QC for backward compatibility)
+  province?: CanadianProvince;
+
   // Entry Mode (Hourly Rate vs. Fixed Gross Salary)
   entryMode: SalaryEntryMode;
-  annualGrossSalary?: number; // Used when entryMode === 'annual' (e.g. $65,000)
-  periodGrossSalary?: number; // Used when entryMode === 'biweekly' or 'monthly'
+  annualGrossSalary?: number; // e.g. $65,000
+  periodGrossSalary?: number; // e.g. $2,500
 
   // Basic Inputs
   hourlyRate: number;
@@ -36,25 +43,25 @@ export interface TaxInput {
   mode: 'simple' | 'advanced';
 
   // Advanced Inputs: Premiums & Earnings
-  shiftPremiumType: 'hourly' | 'fixed'; // $/h or fixed amount per pay period
-  shiftPremiumAmount: number; // e.g. $3.50/h or $252.08 / bi-weekly
+  shiftPremiumType: 'hourly' | 'fixed';
+  shiftPremiumAmount: number;
 
-  // Advanced Inputs: Group Insurance (Assurance Collective - Per Pay Period)
-  healthInsuranceEmployee: number; // e.g. $74.28
-  lifeAndDisabilityInsuranceEmployee: number; // e.g. $16.30 (vie base 13.68 + accident 1.06 + personne charge 1.56)
-  dentalInsuranceEmployee: number; // e.g. $0 or specific amount
+  // Advanced Inputs: Group Insurance
+  healthInsuranceEmployee: number;
+  lifeAndDisabilityInsuranceEmployee: number;
+  dentalInsuranceEmployee: number;
 
-  // Taxable benefits paid by employer (Avantages imposables employeur - adds to QC taxable base)
-  employerTaxableBenefits: number; // e.g. $56.13 (eyeur ass medicale 27.44 + dentaire 28.69)
+  // Taxable benefits paid by employer (e.g. Box J of RL-1 in QC)
+  employerTaxableBenefits: number;
 
   // Retirement & Union
   groupRrspType: 'percent' | 'fixed';
-  groupRrspValue: number; // % of gross or fixed $ per pay period
+  groupRrspValue: number;
   unionDuesType: 'percent' | 'fixed';
-  unionDuesValue: number; // % of gross or fixed $ per pay period
+  unionDuesValue: number;
 
-  // Other deductions (Cafeteria, store purchases, etc.)
-  otherDeductionsPerPay: number; // e.g. $9.00 (3 repas cafétéria à $3)
+  // Other deductions (Cafeteria, etc.)
+  otherDeductionsPerPay: number;
 }
 
 export interface DeductionItem {
@@ -74,21 +81,21 @@ export interface PeriodResult {
   gross: number;
   federalTax: number;
   provincialTax: number;
-  rrq: number;
-  rqap: number;
-  ae: number;
+  rrq: number; // In other provinces, represents CPP
+  rqap: number; // 0 in other provinces (covered by federal EI)
+  ae: number; // Federal EI
   groupInsurance: number;
   retirementAndUnion: number;
   otherDeductions: number;
-  totalStatutoryDeductions: number; // Impôts + cotisations publiques
-  totalNonStatutoryDeductions: number; // Assurances + REER + syndicat + cafétéria
+  totalStatutoryDeductions: number;
+  totalNonStatutoryDeductions: number;
   totalDeductions: number;
   net: number;
-  effectiveTaxRate: number; // % total deductions / gross
+  effectiveTaxRate: number;
 }
 
 export interface PrecisionBreakdown {
-  score: number; // 0 to 100%
+  score: number;
   level: 'basic' | 'moderate' | 'high' | 'ultra';
   label: string;
   description: string;
@@ -97,6 +104,8 @@ export interface PrecisionBreakdown {
 }
 
 export interface CalculationResult {
+  province: CanadianProvince;
+  provinceInfo: ProvinceInfo;
   input: TaxInput;
   totalHoursPerWeek: number;
   effectiveHourlyRateGross: number;
@@ -104,17 +113,17 @@ export interface CalculationResult {
   annualGross: number;
   annualFederalTax: number;
   annualProvincialTax: number;
-  annualRRQ: number;
-  annualRQAP: number;
-  annualAE: number;
+  annualRRQ: number; // RRQ (QC) or CPP (Rest of Canada)
+  annualRQAP: number; // RQAP (QC only)
+  annualAE: number; // Employment Insurance (AE / EI)
   annualGroupInsurance: number;
   annualRetirementAndUnion: number;
   annualOtherDeductions: number;
   annualTotalDeductions: number;
   annualNet: number;
-  effectiveTaxRate: number; // %
-  marginalTaxRate: number; // %
-  takeHomePercentage: number; // %
+  effectiveTaxRate: number;
+  marginalTaxRate: number;
+  takeHomePercentage: number;
   precision: PrecisionBreakdown;
   selectedPeriod: PeriodResult;
   cascade: {
@@ -128,67 +137,13 @@ export interface CalculationResult {
   deductionsList: DeductionItem[];
 }
 
-// 2025/2026 Fiscal Constants for Quebec & Canada
-const PARAMS = {
-  WEEKS_PER_YEAR: 52,
-  DAYS_PER_YEAR: 260, // 5 days/week * 52 weeks
-  BIWEEKLY_PERIODS: 26,
-  MONTHS_PER_YEAR: 12,
-
-  // RRQ (Régime de rentes du Québec)
-  RRQ: {
-    EXEMPTION: 3500,
-    MGA_BASE: 71300, // Maximum Pensionable Earnings 2025
-    BASE_RATE: 0.064, // 6.40%
-    MGA_SUPPLEMENTARY: 81900,
-    SUPP_RATE: 0.04,
-  },
-
-  // RQAP (Régime québécois d'assurance parentale)
-  RQAP: {
-    MAX_EARNINGS: 94000,
-    EMPLOYEE_RATE: 0.00494, // 0.494%
-  },
-
-  // AE (Assurance-Emploi - Quebec reduced rate)
-  AE: {
-    MAX_EARNINGS: 65700,
-    EMPLOYEE_RATE: 0.0132, // 1.32% in Quebec
-  },
-
-  // Federal Tax (ARC / CRA)
-  FEDERAL: {
-    BPA: 15705, // Basic Personal Amount
-    EMPLOYMENT_AMOUNT_MAX: 1433,
-    TAX_CREDIT_RATE: 0.15,
-    QUEBEC_ABATEMENT_RATE: 0.165, // 16.5% reduction for Quebec residents
-    BRACKETS: [
-      { max: 55867, rate: 0.15 },
-      { max: 111733, rate: 0.205 },
-      { max: 173205, rate: 0.26 },
-      { max: 246752, rate: 0.29 },
-      { max: Infinity, rate: 0.33 },
-    ],
-  },
-
-  // Quebec Provincial Tax (Revenu Québec)
-  QUEBEC: {
-    BPA: 18056,
-    WORKER_DEDUCTION_RATE: 0.06,
-    WORKER_DEDUCTION_MAX: 1380,
-    TAX_CREDIT_RATE: 0.14,
-    BRACKETS: [
-      { max: 51780, rate: 0.14 },
-      { max: 103545, rate: 0.19 },
-      { max: 126000, rate: 0.24 },
-      { max: Infinity, rate: 0.2575 },
-    ],
-  },
-};
-
-function calculateProgressiveTax(income: number, brackets: { max: number; rate: number }[]): { tax: number; marginalRate: number } {
+// Helper function for progressive tax calculations
+function calculateProgressiveTax(
+  income: number,
+  brackets: { max: number; rate: number }[]
+): { tax: number; marginalRate: number } {
   if (income <= 0) return { tax: 0, marginalRate: 0 };
-  
+
   let tax = 0;
   let previousMax = 0;
   let marginalRate = brackets[0].rate;
@@ -207,7 +162,12 @@ function calculateProgressiveTax(income: number, brackets: { max: number; rate: 
   return { tax, marginalRate };
 }
 
+// Core Canadian Pay Calculation (Supports all 13 jurisdictions)
 export function calculateQuebecPay(input: TaxInput): CalculationResult {
+  const province: CanadianProvince = input.province || 'QC';
+  const provInfo = CANADIAN_PROVINCES[province] || CANADIAN_PROVINCES.QC;
+  const provRules = CANADA_FISCAL_RULES[province] || CANADA_FISCAL_RULES.QC;
+
   const {
     entryMode,
     annualGrossSalary,
@@ -232,15 +192,15 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
   } = input;
 
   const safeRegHours = Math.max(0.5, regularHoursPerWeek || 40);
-  
+
   // Resolve hourly rate based on entry mode
   let resolvedHourlyRate = Math.max(0, hourlyRate || 0);
   if (entryMode === 'annual' && annualGrossSalary && annualGrossSalary > 0) {
-    resolvedHourlyRate = annualGrossSalary / (safeRegHours * PARAMS.WEEKS_PER_YEAR);
+    resolvedHourlyRate = annualGrossSalary / (safeRegHours * ALL_CANADA_CONSTANTS.WEEKS_PER_YEAR);
   } else if (entryMode === 'biweekly' && periodGrossSalary && periodGrossSalary > 0) {
     resolvedHourlyRate = periodGrossSalary / (safeRegHours * 2);
   } else if (entryMode === 'monthly' && periodGrossSalary && periodGrossSalary > 0) {
-    resolvedHourlyRate = (periodGrossSalary * PARAMS.MONTHS_PER_YEAR) / (safeRegHours * PARAMS.WEEKS_PER_YEAR);
+    resolvedHourlyRate = (periodGrossSalary * ALL_CANADA_CONSTANTS.MONTHS_PER_YEAR) / (safeRegHours * ALL_CANADA_CONSTANTS.WEEKS_PER_YEAR);
   }
 
   const safeHourly = resolvedHourlyRate;
@@ -259,15 +219,14 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
     if (shiftPremiumType === 'hourly') {
       weeklyShiftPremium = shiftPremiumAmount * totalHoursPerWeek;
     } else {
-      // Fixed amount given per pay period (converted to weekly)
-      weeklyShiftPremium = (shiftPremiumAmount * PARAMS.BIWEEKLY_PERIODS) / PARAMS.WEEKS_PER_YEAR;
+      weeklyShiftPremium = (shiftPremiumAmount * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS) / ALL_CANADA_CONSTANTS.WEEKS_PER_YEAR;
     }
   }
 
   const weeklyGross = regularGrossPerWeek + ot15GrossPerWeek + ot20GrossPerWeek + weeklyShiftPremium;
-  const annualGross = weeklyGross * PARAMS.WEEKS_PER_YEAR;
+  const annualGross = weeklyGross * ALL_CANADA_CONSTANTS.WEEKS_PER_YEAR;
 
-  // Annualized Non-Statutory Deductions (Inputs are calibrated per bi-weekly pay period as standard)
+  // Annualized Non-Statutory Deductions
   let annualHealthIns = 0;
   let annualLifeDisabilityIns = 0;
   let annualDentalIns = 0;
@@ -277,95 +236,152 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
   let annualOtherDeductions = 0;
 
   if (mode === 'advanced') {
-    annualHealthIns = Math.max(0, healthInsuranceEmployee || 0) * PARAMS.BIWEEKLY_PERIODS;
-    annualLifeDisabilityIns = Math.max(0, lifeAndDisabilityInsuranceEmployee || 0) * PARAMS.BIWEEKLY_PERIODS;
-    annualDentalIns = Math.max(0, dentalInsuranceEmployee || 0) * PARAMS.BIWEEKLY_PERIODS;
-    annualEmployerTaxableBenefits = Math.max(0, employerTaxableBenefits || 0) * PARAMS.BIWEEKLY_PERIODS;
+    annualHealthIns = Math.max(0, healthInsuranceEmployee || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
+    annualLifeDisabilityIns = Math.max(0, lifeAndDisabilityInsuranceEmployee || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
+    annualDentalIns = Math.max(0, dentalInsuranceEmployee || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
+    annualEmployerTaxableBenefits = Math.max(0, employerTaxableBenefits || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
 
     if (groupRrspType === 'percent') {
       annualGroupRrsp = Math.max(0, (groupRrspValue || 0) / 100) * annualGross;
     } else {
-      annualGroupRrsp = Math.max(0, groupRrspValue || 0) * PARAMS.BIWEEKLY_PERIODS;
+      annualGroupRrsp = Math.max(0, groupRrspValue || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
     }
 
     if (unionDuesType === 'percent') {
       annualUnionDues = Math.max(0, (unionDuesValue || 0) / 100) * annualGross;
     } else {
-      annualUnionDues = Math.max(0, unionDuesValue || 0) * PARAMS.BIWEEKLY_PERIODS;
+      annualUnionDues = Math.max(0, unionDuesValue || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
     }
 
-    annualOtherDeductions = Math.max(0, otherDeductionsPerPay || 0) * PARAMS.BIWEEKLY_PERIODS;
+    annualOtherDeductions = Math.max(0, otherDeductionsPerPay || 0) * ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS;
   }
 
   const annualGroupInsurance = annualHealthIns + annualLifeDisabilityIns + annualDentalIns;
   const annualRetirementAndUnion = annualGroupRrsp + annualUnionDues;
 
-  // 1. Calculate RRQ (Régime de rentes du Québec)
-  let annualRRQ = 0;
-  if (annualGross > PARAMS.RRQ.EXEMPTION) {
-    const contributoryBaseEarnings = Math.min(annualGross, PARAMS.RRQ.MGA_BASE) - PARAMS.RRQ.EXEMPTION;
-    const baseContribution = Math.max(0, contributoryBaseEarnings * PARAMS.RRQ.BASE_RATE);
+  // 1. Calculate Pension: RRQ (Québec) vs CPP (Rest of Canada)
+  let annualRRQ = 0; // RRQ or CPP
+  const isQuebec = province === 'QC';
 
-    let suppContribution = 0;
-    if (annualGross > PARAMS.RRQ.MGA_BASE) {
-      const suppEarnings = Math.min(annualGross, PARAMS.RRQ.MGA_SUPPLEMENTARY) - PARAMS.RRQ.MGA_BASE;
-      suppContribution = Math.max(0, suppEarnings * PARAMS.RRQ.SUPP_RATE);
+  if (isQuebec) {
+    // RRQ: 6.40% base + 4.0% supp tier 2
+    const RRQ_EXEMPTION = 3500;
+    const RRQ_MGA_BASE = 71300;
+    const RRQ_MGA_SUPP = 81900;
+    if (annualGross > RRQ_EXEMPTION) {
+      const baseEarnings = Math.min(annualGross, RRQ_MGA_BASE) - RRQ_EXEMPTION;
+      const baseContribution = Math.max(0, baseEarnings * 0.064);
+
+      let suppContribution = 0;
+      if (annualGross > RRQ_MGA_BASE) {
+        const suppEarnings = Math.min(annualGross, RRQ_MGA_SUPP) - RRQ_MGA_BASE;
+        suppContribution = Math.max(0, suppEarnings * 0.04);
+      }
+      annualRRQ = baseContribution + suppContribution;
     }
+  } else {
+    // CPP: 5.95% base + 4.0% supp tier 2
+    const { CPP } = ALL_CANADA_CONSTANTS;
+    if (annualGross > CPP.EXEMPTION) {
+      const baseEarnings = Math.min(annualGross, CPP.MGA_BASE) - CPP.EXEMPTION;
+      const baseContribution = Math.max(0, baseEarnings * CPP.BASE_RATE);
 
-    annualRRQ = baseContribution + suppContribution;
+      let suppContribution = 0;
+      if (annualGross > CPP.MGA_BASE) {
+        const suppEarnings = Math.min(annualGross, CPP.MGA_SUPPLEMENTARY) - CPP.MGA_BASE;
+        suppContribution = Math.max(0, suppEarnings * CPP.SUPP_RATE);
+      }
+      annualRRQ = baseContribution + suppContribution;
+    }
   }
 
-  // 2. Calculate RQAP (Régime québécois d'assurance parentale)
-  const insurableRQAP = Math.min(annualGross, PARAMS.RQAP.MAX_EARNINGS);
-  const annualRQAP = insurableRQAP * PARAMS.RQAP.EMPLOYEE_RATE;
+  // 2. Calculate RQAP (Parental) - QC only
+  let annualRQAP = 0;
+  if (isQuebec) {
+    const RQAP_MAX = 94000;
+    const RQAP_RATE = 0.00494;
+    annualRQAP = Math.min(annualGross, RQAP_MAX) * RQAP_RATE;
+  }
 
-  // 3. Calculate AE (Assurance-Emploi au Québec - 1.32%)
-  const insurableAE = Math.min(annualGross, PARAMS.AE.MAX_EARNINGS);
-  const annualAE = insurableAE * PARAMS.AE.EMPLOYEE_RATE;
+  // 3. Calculate AE / Employment Insurance (EI)
+  const eiMaxEarnings = 65700;
+  const eiRate = provInfo.eiRate; // 1.32% in QC, 1.64% rest of Canada
+  const annualAE = Math.min(annualGross, eiMaxEarnings) * eiRate;
 
-  // 4. Calculate Quebec Provincial Tax (Revenu Québec)
-  // Worker deduction (Déduction pour travailleur 6% up to $1,380)
-  const workerDeduction = Math.min(annualGross * PARAMS.QUEBEC.WORKER_DEDUCTION_RATE, PARAMS.QUEBEC.WORKER_DEDUCTION_MAX);
+  // 4. Calculate Provincial / Territorial Tax
+  let annualProvincialTax = 0;
+  let provMarginalRate = provRules.brackets[0].rate;
 
-  // In Quebec:
-  // - RRSP and Union dues reduce taxable income
-  // - Employer-paid health/dental insurance (Avantage imposable) is TAXABLE in Quebec (Box J of RL-1)!
-  const quebecTaxableBase = Math.max(
+  let workerDeduction = 0;
+  if (provRules.workerDeduction) {
+    workerDeduction = Math.min(
+      annualGross * provRules.workerDeduction.rate,
+      provRules.workerDeduction.max
+    );
+  }
+
+  // In QC, employer health insurance (Avantage imposable) is taxable provincially (Box J RL-1)
+  const provTaxableBase = Math.max(
     0,
-    annualGross + annualEmployerTaxableBenefits - workerDeduction - annualGroupRrsp - annualUnionDues
+    annualGross +
+      (isQuebec ? annualEmployerTaxableBenefits : 0) -
+      workerDeduction -
+      annualGroupRrsp -
+      annualUnionDues
   );
 
-  const { tax: rawProvincialTax, marginalRate: qcMarginalRate } = calculateProgressiveTax(
-    quebecTaxableBase,
-    PARAMS.QUEBEC.BRACKETS
-  );
+  const { tax: rawProvTax, marginalRate } = calculateProgressiveTax(provTaxableBase, provRules.brackets);
+  provMarginalRate = marginalRate;
 
-  // Quebec Non-Refundable Tax Credits
-  const qcBasicCredit = PARAMS.QUEBEC.BPA * PARAMS.QUEBEC.TAX_CREDIT_RATE;
-  const qcSocialContribCredit = (annualRRQ + annualRQAP) * PARAMS.QUEBEC.TAX_CREDIT_RATE;
-  const totalQcCredits = qcBasicCredit + qcSocialContribCredit;
+  // Provincial Credits
+  const provBasicCredit = provRules.bpa * provRules.creditRate;
+  const provSocialCredit = (annualRRQ + (isQuebec ? annualRQAP : annualAE)) * provRules.creditRate;
+  const totalProvCredits = provBasicCredit + provSocialCredit;
 
-  const annualProvincialTax = Math.max(0, rawProvincialTax - totalQcCredits);
+  let baseProvTax = Math.max(0, rawProvTax - totalProvCredits);
+
+  // Ontario Surtax & Health Premium
+  if (province === 'ON' && provRules.surtax) {
+    let ontarioSurtax = 0;
+    if (baseProvTax > provRules.surtax.threshold1) {
+      ontarioSurtax += (baseProvTax - provRules.surtax.threshold1) * provRules.surtax.rate1;
+    }
+    if (provRules.surtax.threshold2 && baseProvTax > provRules.surtax.threshold2 && provRules.surtax.rate2) {
+      ontarioSurtax += (baseProvTax - provRules.surtax.threshold2) * provRules.surtax.rate2;
+    }
+    baseProvTax += ontarioSurtax;
+
+    if (provRules.healthPremium) {
+      const ohp = provRules.healthPremium(provTaxableBase);
+      baseProvTax += ohp;
+    }
+  }
+
+  annualProvincialTax = Math.max(0, baseProvTax);
 
   // 5. Calculate Federal Income Tax (CRA / ARC)
-  // At federal level, RRSP and Union dues reduce taxable income. Employer health benefits are NOT taxable federally!
   const federalTaxableBase = Math.max(0, annualGross - annualGroupRrsp - annualUnionDues);
 
   const { tax: rawFederalTax, marginalRate: fedMarginalRate } = calculateProgressiveTax(
     federalTaxableBase,
-    PARAMS.FEDERAL.BRACKETS
+    ALL_CANADA_CONSTANTS.FEDERAL.BRACKETS
   );
 
   // Federal Non-refundable credits
-  const fedBasicCredit = PARAMS.FEDERAL.BPA * PARAMS.FEDERAL.TAX_CREDIT_RATE;
-  const fedEmploymentCredit = Math.min(annualGross, PARAMS.FEDERAL.EMPLOYMENT_AMOUNT_MAX) * PARAMS.FEDERAL.TAX_CREDIT_RATE;
-  const fedSocialContribCredit = (annualRRQ + annualAE) * PARAMS.FEDERAL.TAX_CREDIT_RATE;
-  const totalFedCredits = fedBasicCredit + fedEmploymentCredit + fedSocialContribCredit;
+  const fedBasicCredit = ALL_CANADA_CONSTANTS.FEDERAL.BPA * ALL_CANADA_CONSTANTS.FEDERAL.TAX_CREDIT_RATE;
+  const fedEmploymentCredit =
+    Math.min(annualGross, ALL_CANADA_CONSTANTS.FEDERAL.EMPLOYMENT_AMOUNT_MAX) *
+    ALL_CANADA_CONSTANTS.FEDERAL.TAX_CREDIT_RATE;
+  const fedSocialCredit = (annualRRQ + annualAE) * ALL_CANADA_CONSTANTS.FEDERAL.TAX_CREDIT_RATE;
+  const totalFedCredits = fedBasicCredit + fedEmploymentCredit + fedSocialCredit;
 
   const basicFederalTax = Math.max(0, rawFederalTax - totalFedCredits);
 
-  // Quebec Abatement (Abattement du Québec): 16.5% reduction on basic federal tax
-  const quebecAbatement = basicFederalTax * PARAMS.FEDERAL.QUEBEC_ABATEMENT_RATE;
+  // Quebec Abatement: 16.5% reduction on basic federal tax for Quebec residents ONLY
+  let quebecAbatement = 0;
+  if (provInfo.hasQuebecAbatement) {
+    quebecAbatement = basicFederalTax * ALL_CANADA_CONSTANTS.FEDERAL.QUEBEC_ABATEMENT_RATE;
+  }
   const annualFederalTax = Math.max(0, basicFederalTax - quebecAbatement);
 
   // Totals
@@ -376,31 +392,31 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
 
   const effectiveTaxRate = annualGross > 0 ? (annualTotalDeductions / annualGross) * 100 : 0;
   const takeHomePercentage = annualGross > 0 ? (annualNet / annualGross) * 100 : 0;
-  const combinedMarginalRate = (qcMarginalRate + fedMarginalRate * (1 - PARAMS.FEDERAL.QUEBEC_ABATEMENT_RATE)) * 100;
+  const combinedMarginalRate =
+    (provMarginalRate + fedMarginalRate * (1 - (provInfo.hasQuebecAbatement ? ALL_CANADA_CONSTANTS.FEDERAL.QUEBEC_ABATEMENT_RATE : 0))) * 100;
 
   // Real Net Rate per Hour
-  const annualTotalHours = totalHoursPerWeek * PARAMS.WEEKS_PER_YEAR;
+  const annualTotalHours = totalHoursPerWeek * ALL_CANADA_CONSTANTS.WEEKS_PER_YEAR;
   const effectiveHourlyRateGross = annualTotalHours > 0 ? annualGross / annualTotalHours : safeHourly;
   const effectiveHourlyRateNet = annualTotalHours > 0 ? annualNet / annualTotalHours : 0;
 
-  // Calculate Precision Score (0 - 100%)
-  const factorsConfigured: string[] = ['Taux horaire', 'Horas semanais', 'Régimes légaux QC/ARC'];
+  // Precision breakdown
+  const factorsConfigured: string[] = ['Taux horaire', 'Heures de travail', `Barèmes officiels (${provInfo.name.fr})`];
   const factorsMissing: string[] = [];
-
-  let precisionScore = 85; // Base precision for statutory tax only
+  let precisionScore = 86;
 
   if (mode === 'advanced') {
     if (shiftPremiumAmount > 0) {
       precisionScore += 4;
-      factorsConfigured.push('Primes de quart / horaire');
+      factorsConfigured.push('Primes de quart');
     }
     if (healthInsuranceEmployee > 0 || dentalInsuranceEmployee > 0 || lifeAndDisabilityInsuranceEmployee > 0) {
       precisionScore += 5;
-      factorsConfigured.push('Assurance collective (Santé/Vie)');
+      factorsConfigured.push('Assurance collective');
     }
     if (employerTaxableBenefits > 0) {
       precisionScore += 3;
-      factorsConfigured.push('Avantages imposables (Case J RL-1)');
+      factorsConfigured.push('Avantages imposables');
     }
     if (groupRrspValue > 0) {
       precisionScore += 1.5;
@@ -410,15 +426,10 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
       precisionScore += 1;
       factorsConfigured.push('Cotisation syndicale');
     }
-    if (otherDeductionsPerPay > 0) {
-      precisionScore += 0.5;
-      factorsConfigured.push('Cafétéria & déductions diverses');
-    }
   } else {
     factorsMissing.push('Assurance collective (médicale/dentaire)');
-    factorsMissing.push('Primes de quart / horaire');
-    factorsMissing.push('Avantages imposables employeur');
-    factorsMissing.push('REER ou syndicat (le cas échéant)');
+    factorsMissing.push('Primes de quart');
+    factorsMissing.push('REER collectif');
   }
 
   precisionScore = Math.min(99.5, precisionScore);
@@ -432,12 +443,7 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
         : precisionScore >= 92
         ? 'Haute Précision (~95%)'
         : 'Précision Standard (~85-90%)',
-    description:
-      precisionScore >= 98
-        ? 'Reflète fidèlement votre talon de paie réel avec assurances, primes et avantages imposables.'
-        : precisionScore >= 92
-        ? 'Inclut la majorité des retenues de votre employeur.'
-        : 'Estimation basée uniquement sur les retenues gouvernementales obligatoires (sans assurance collective ni primes).',
+    description: `Calcul adapté aux règles fiscales et sociales de : ${provInfo.name.fr}.`,
     factorsConfigured,
     factorsMissing,
   };
@@ -450,13 +456,14 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
     const rrq = annualRRQ / periodsPerYear;
     const rqap = annualRQAP / periodsPerYear;
     const ae = annualAE / periodsPerYear;
-    const groupIns = annualGroupInsurance / periodsPerYear;
-    const retUnion = annualRetirementAndUnion / periodsPerYear;
-    const other = annualOtherDeductions / periodsPerYear;
-    const statutory = annualStatutoryDeductions / periodsPerYear;
-    const nonStatutory = annualNonStatutoryDeductions / periodsPerYear;
-    const deductions = annualTotalDeductions / periodsPerYear;
-    const net = annualNet / periodsPerYear;
+    const grpIns = annualGroupInsurance / periodsPerYear;
+    const ret = annualRetirementAndUnion / periodsPerYear;
+    const oth = annualOtherDeductions / periodsPerYear;
+
+    const statDeds = fed + prov + rrq + rqap + ae;
+    const nonStatDeds = grpIns + ret + oth;
+    const totDeds = statDeds + nonStatDeds;
+    const net = gross - totDeds;
 
     return {
       frequency: freq,
@@ -468,56 +475,55 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
       rrq: Math.round(rrq * 100) / 100,
       rqap: Math.round(rqap * 100) / 100,
       ae: Math.round(ae * 100) / 100,
-      groupInsurance: Math.round(groupIns * 100) / 100,
-      retirementAndUnion: Math.round(retUnion * 100) / 100,
-      otherDeductions: Math.round(other * 100) / 100,
-      totalStatutoryDeductions: Math.round(statutory * 100) / 100,
-      totalNonStatutoryDeductions: Math.round(nonStatutory * 100) / 100,
-      totalDeductions: Math.round(deductions * 100) / 100,
+      groupInsurance: Math.round(grpIns * 100) / 100,
+      retirementAndUnion: Math.round(ret * 100) / 100,
+      otherDeductions: Math.round(oth * 100) / 100,
+      totalStatutoryDeductions: Math.round(statDeds * 100) / 100,
+      totalNonStatutoryDeductions: Math.round(nonStatDeds * 100) / 100,
+      totalDeductions: Math.round(totDeds * 100) / 100,
       net: Math.round(net * 100) / 100,
-      effectiveTaxRate: Math.round(effectiveTaxRate * 10) / 10,
+      effectiveTaxRate: gross > 0 ? Math.round((totDeds / gross) * 1000) / 10 : 0,
     };
   };
 
   const cascade = {
     hourly: {
       frequency: 'hourly' as PayFrequency,
-      label: 'Par Heure',
-      periodsPerYear: annualTotalHours || 1,
+      label: 'Par Heure (Brut vs Net Réel)',
+      periodsPerYear: annualTotalHours,
       gross: Math.round(effectiveHourlyRateGross * 100) / 100,
-      federalTax: annualTotalHours ? Math.round((annualFederalTax / annualTotalHours) * 100) / 100 : 0,
-      provincialTax: annualTotalHours ? Math.round((annualProvincialTax / annualTotalHours) * 100) / 100 : 0,
-      rrq: annualTotalHours ? Math.round((annualRRQ / annualTotalHours) * 100) / 100 : 0,
-      rqap: annualTotalHours ? Math.round((annualRQAP / annualTotalHours) * 100) / 100 : 0,
-      ae: annualTotalHours ? Math.round((annualAE / annualTotalHours) * 100) / 100 : 0,
-      groupInsurance: annualTotalHours ? Math.round((annualGroupInsurance / annualTotalHours) * 100) / 100 : 0,
-      retirementAndUnion: annualTotalHours ? Math.round((annualRetirementAndUnion / annualTotalHours) * 100) / 100 : 0,
-      otherDeductions: annualTotalHours ? Math.round((annualOtherDeductions / annualTotalHours) * 100) / 100 : 0,
-      totalStatutoryDeductions: annualTotalHours ? Math.round((annualStatutoryDeductions / annualTotalHours) * 100) / 100 : 0,
-      totalNonStatutoryDeductions: annualTotalHours ? Math.round((annualNonStatutoryDeductions / annualTotalHours) * 100) / 100 : 0,
-      totalDeductions: annualTotalHours ? Math.round((annualTotalDeductions / annualTotalHours) * 100) / 100 : 0,
+      federalTax: annualTotalHours > 0 ? Math.round((annualFederalTax / annualTotalHours) * 100) / 100 : 0,
+      provincialTax: annualTotalHours > 0 ? Math.round((annualProvincialTax / annualTotalHours) * 100) / 100 : 0,
+      rrq: annualTotalHours > 0 ? Math.round((annualRRQ / annualTotalHours) * 100) / 100 : 0,
+      rqap: annualTotalHours > 0 ? Math.round((annualRQAP / annualTotalHours) * 100) / 100 : 0,
+      ae: annualTotalHours > 0 ? Math.round((annualAE / annualTotalHours) * 100) / 100 : 0,
+      groupInsurance: annualTotalHours > 0 ? Math.round((annualGroupInsurance / annualTotalHours) * 100) / 100 : 0,
+      retirementAndUnion: annualTotalHours > 0 ? Math.round((annualRetirementAndUnion / annualTotalHours) * 100) / 100 : 0,
+      otherDeductions: annualTotalHours > 0 ? Math.round((annualOtherDeductions / annualTotalHours) * 100) / 100 : 0,
+      totalStatutoryDeductions: annualTotalHours > 0 ? Math.round((annualStatutoryDeductions / annualTotalHours) * 100) / 100 : 0,
+      totalNonStatutoryDeductions: annualTotalHours > 0 ? Math.round((annualNonStatutoryDeductions / annualTotalHours) * 100) / 100 : 0,
+      totalDeductions: annualTotalHours > 0 ? Math.round((annualTotalDeductions / annualTotalHours) * 100) / 100 : 0,
       net: Math.round(effectiveHourlyRateNet * 100) / 100,
       effectiveTaxRate: Math.round(effectiveTaxRate * 10) / 10,
     },
-    daily: createPeriod('daily', 'Par Jour (8h)', PARAMS.DAYS_PER_YEAR),
-    weekly: createPeriod('weekly', 'Hebdomadaire', PARAMS.WEEKS_PER_YEAR),
-    biweekly: createPeriod('biweekly', 'Aux deux semaines (Quinzena)', PARAMS.BIWEEKLY_PERIODS),
-    monthly: createPeriod('monthly', 'Mensuel', PARAMS.MONTHS_PER_YEAR),
+    daily: createPeriod('daily', 'Par Jour (8h)', 260),
+    weekly: createPeriod('weekly', 'Hebdomadaire', ALL_CANADA_CONSTANTS.WEEKS_PER_YEAR),
+    biweekly: createPeriod('biweekly', 'Aux deux semaines (Quinzena)', ALL_CANADA_CONSTANTS.BIWEEKLY_PERIODS),
+    monthly: createPeriod('monthly', 'Mensuel', ALL_CANADA_CONSTANTS.MONTHS_PER_YEAR),
     annually: createPeriod('annually', 'Annuel', 1),
   };
 
   const selectedPeriod = cascade[frequency] || cascade.biweekly;
 
   const deductionsList: DeductionItem[] = [
-    // Statutory Government
     {
-      name: 'Revenu Québec (Impôt Provincial)',
-      code: 'QC_TAX',
+      name: `${provInfo.name.fr} (Impôt Provincial / Territorial)`,
+      code: `${province}_TAX`,
       annual: Math.round(annualProvincialTax * 100) / 100,
       period: Math.round(selectedPeriod.provincialTax * 100) / 100,
       category: 'government',
-      rateDescription: '14% à 25.75% selon le palier',
-      description: 'Impôt provincial net (Revenu Québec). Tient compte des avantages imposables de l’employeur.',
+      rateDescription: `Barèmes ${provInfo.name.fr}`,
+      description: `Impôt sur le revenu perçu par ${provInfo.name.fr}.`,
     },
     {
       name: 'CRA / ARC (Impôt Fédéral)',
@@ -525,17 +531,21 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
       annual: Math.round(annualFederalTax * 100) / 100,
       period: Math.round(selectedPeriod.federalTax * 100) / 100,
       category: 'government',
-      rateDescription: '15% à 33% (-16.5% Abattement QC)',
-      description: 'Impôt fédéral avec réduction directe de 16.5% pour les résidents fiscaux du Québec.',
+      rateDescription: isQuebec ? '15% à 33% (-16.5% Abattement QC)' : '15% à 33%',
+      description: isQuebec
+        ? 'Impôt fédéral avec réduction directe de 16.5% pour les résidents fiscaux du Québec.'
+        : 'Impôt sur le revenu perçu par l’Agence du revenu du Canada (CRA/ARC).',
     },
     {
-      name: 'RRQ (Régime de rentes du Québec)',
-      code: 'RRQ',
+      name: isQuebec ? 'RRQ (Régime de rentes du Québec)' : 'CPP (Canada Pension Plan / RPC)',
+      code: isQuebec ? 'RRQ' : 'CPP',
       annual: Math.round(annualRRQ * 100) / 100,
       period: Math.round(selectedPeriod.rrq * 100) / 100,
       category: 'government',
-      rateDescription: '6.40% (exemption 3 500 $, max 71 300 $)',
-      description: 'Régime de retraite public du Québec pour les travailleurs salariés.',
+      rateDescription: isQuebec ? '6.40% (base) + 4% (supp)' : '5.95% (base) + 4% (supp)',
+      description: isQuebec
+        ? 'Régime public de rentes du Québec administré par Retraite Québec.'
+        : 'Régime de pensions du Canada pour la retraite et l’invalidité.',
     },
     {
       name: 'AE (Assurance-Emploi)',
@@ -543,30 +553,32 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
       annual: Math.round(annualAE * 100) / 100,
       period: Math.round(selectedPeriod.ae * 100) / 100,
       category: 'government',
-      rateDescription: '1.32% (taux réduit spécial Québec)',
-      description: 'Assurance fédérale en cas de chômage. Taux avantageux exclusif au Québec.',
+      rateDescription: isQuebec ? '1.32% (taux réduit Québec)' : '1.64% (taux standard fédéral)',
+      description: 'Assurance fédérale en cas de perte d’emploi.',
     },
-    {
+  ];
+
+  if (isQuebec && annualRQAP > 0) {
+    deductionsList.push({
       name: 'RQAP (Assurance Parentale)',
       code: 'RQAP',
       annual: Math.round(annualRQAP * 100) / 100,
       period: Math.round(selectedPeriod.rqap * 100) / 100,
       category: 'government',
       rateDescription: '0.494% (max 94 000 $)',
-      description: 'Congés parentaux, maternité et paternité administrés par le Québec.',
-    },
-  ];
+      description: 'Prestations de maternité, paternité et parentales au Québec.',
+    });
+  }
 
-  // Add Insurance & Workplace items if configured
   if (annualGroupInsurance > 0) {
     deductionsList.push({
-      name: 'Assurance Collective (Santé, Vie, Accident)',
+      name: 'Assurance Collective (Santé, Vie, Dentaire)',
       code: 'ASSUR_COLL',
       annual: Math.round(annualGroupInsurance * 100) / 100,
       period: Math.round(selectedPeriod.groupInsurance * 100) / 100,
       category: 'insurance',
-      rateDescription: 'Régime d’assurance de votre entreprise',
-      description: 'Part payée par l’employé pour l’assurance médicale, vie de base, accidents et personnes à charge.',
+      rateDescription: 'Régime privé employeur',
+      description: 'Cotisation de l’employé pour l’assurance médicale et paramédicale.',
     });
   }
 
@@ -578,23 +590,25 @@ export function calculateQuebecPay(input: TaxInput): CalculationResult {
       period: Math.round(selectedPeriod.retirementAndUnion * 100) / 100,
       category: 'retirement',
       rateDescription: 'Déductible d’impôt',
-      description: 'Épargne retraite collective et/ou retenue syndicale (déductibles d’impôt à la source).',
+      description: 'Retraite d’entreprise ou cotisation syndicale prélevée à la source.',
     });
   }
 
   if (annualOtherDeductions > 0) {
     deductionsList.push({
-      name: 'Cafétéria & Achats Magasin Usine',
+      name: 'Autres retenues (Cafétéria, etc.)',
       code: 'DIVERS',
       annual: Math.round(annualOtherDeductions * 100) / 100,
       period: Math.round(selectedPeriod.otherDeductions * 100) / 100,
       category: 'workplace',
-      rateDescription: 'Retenues internes sur la paie',
-      description: 'Repas à prix préférentiel à la cafétéria de l’entreprise ou achats au magasin de l’usine.',
+      rateDescription: 'Retenues internes',
+      description: 'Déductions diverses autorisées sur la paie.',
     });
   }
 
   return {
+    province,
+    provinceInfo: provInfo,
     input,
     totalHoursPerWeek,
     effectiveHourlyRateGross,
@@ -630,13 +644,12 @@ export function formatCurrency(amount: number, locale: string = 'fr-CA'): string
 }
 
 // -------------------------------------------------------------
-// Quebec Workplace Benefits Calculators (Normes du Travail CNESST)
+// Quebec Workplace Benefits Calculators (CNESST Norms)
 // -------------------------------------------------------------
-
 export interface VacationBenefitResult {
   yearsOfService: number;
-  ratePercent: number; // 4% or 6%
-  weeksPaidLeave: number; // 2 or 3 weeks
+  ratePercent: number;
+  weeksPaidLeave: number;
   annualAmount: number;
   biweeklyAmount: number;
   weeklyAmount: number;
@@ -660,18 +673,16 @@ export function calculateQuebecVacation(annualGross: number, yearsOfService: num
 }
 
 export interface HolidayBenefitResult {
-  holidayPayPerDay: number; // 1/20 rule
+  holidayPayPerDay: number;
   annualEightHolidaysTotal: number;
   holidaysCount: number;
   explanation: string;
 }
 
 export function calculateQuebecStatutoryHolidays(biweeklyGross: number): HolidayBenefitResult {
-  // CNESST 1/20 rule: 1/20 of the wages earned during the 4 complete pay weeks preceding the holiday
-  // In a bi-weekly cycle, 4 weeks = 2 bi-weekly pays
   const fourWeeksEarnings = biweeklyGross * 2;
-  const holidayPayPerDay = fourWeeksEarnings / 20; // exactly 10% of a bi-weekly pay
-  const annualEightHolidaysTotal = holidayPayPerDay * 8; // 8 official statutory paid holidays in QC
+  const holidayPayPerDay = fourWeeksEarnings / 20;
+  const annualEightHolidaysTotal = holidayPayPerDay * 8;
 
   return {
     holidayPayPerDay: Math.round(holidayPayPerDay * 100) / 100,
@@ -717,10 +728,11 @@ export function calculateQuebecRrspMatch(
 
 // -------------------------------------------------------------
 // Job Offer Comparator (Comparateur d'Offres d'Emploi)
+// Now with Multi-Province Support!
 // -------------------------------------------------------------
-
 export interface JobOfferInput {
   title: string;
+  province?: CanadianProvince;
   hourlyRate: number;
   hoursPerWeek: number;
   shiftPremiumPerHour: number;
@@ -730,6 +742,8 @@ export interface JobOfferInput {
 
 export interface JobOfferEvaluation {
   title: string;
+  province: CanadianProvince;
+  provinceName: string;
   annualGross: number;
   biweeklyGross: number;
   annualNet: number;
@@ -751,6 +765,7 @@ export interface JobOfferComparisonResult {
 
 export function compareJobOffers(offerA: JobOfferInput, offerB: JobOfferInput): JobOfferComparisonResult {
   const evalOffer = (o: JobOfferInput): JobOfferEvaluation => {
+    const province = o.province || 'QC';
     const regHours = Math.max(1, o.hoursPerWeek || 40);
     const regularAnnual = o.hourlyRate * regHours * 52;
     const premiumAnnual = o.shiftPremiumPerHour * regHours * 52;
@@ -758,6 +773,7 @@ export function compareJobOffers(offerA: JobOfferInput, offerB: JobOfferInput): 
     const biweeklyGross = annualGross / 26;
 
     const calc = calculateQuebecPay({
+      province,
       entryMode: 'hourly',
       hourlyRate: o.hourlyRate,
       regularHoursPerWeek: regHours,
@@ -787,6 +803,8 @@ export function compareJobOffers(offerA: JobOfferInput, offerB: JobOfferInput): 
 
     return {
       title: o.title,
+      province,
+      provinceName: calc.provinceInfo.name.fr,
       annualGross: Math.round(annualGross),
       biweeklyGross: Math.round(biweeklyGross * 100) / 100,
       annualNet: Math.round(annualNet),
@@ -816,4 +834,91 @@ export function compareJobOffers(offerA: JobOfferInput, offerB: JobOfferInput): 
     winner,
     totalCompensationDiff,
   };
+}
+
+// -------------------------------------------------------------
+// Cross-Province Salary & Cost of Living Comparison Engine
+// -------------------------------------------------------------
+export interface ProvinceComparisonItem {
+  province: CanadianProvince;
+  provinceInfo: ProvinceInfo;
+  annualGross: number;
+  biweeklyGross: number;
+  hourlyRate: number;
+  annualNet: number;
+  biweeklyNet: number;
+  effectiveHourlyNet: number;
+  effectiveTaxRate: number;
+  provincialTax: number;
+  federalTax: number;
+  pensionContrib: number; // RRQ or CPP
+  eiContrib: number; // AE
+  adjustedNetPurchasingPower: number; // Net adjusted by Cost of Living Index
+}
+
+export function compareAllProvincesSalary(
+  hourlyRate: number,
+  hoursPerWeek: number = 40
+): ProvinceComparisonItem[] {
+  const provincesList: CanadianProvince[] = [
+    'QC',
+    'ON',
+    'BC',
+    'AB',
+    'MB',
+    'SK',
+    'NS',
+    'NB',
+    'NL',
+    'PE',
+    'YT',
+    'NT',
+    'NU',
+  ];
+
+  return provincesList.map((code) => {
+    const calc = calculateQuebecPay({
+      province: code,
+      entryMode: 'hourly',
+      hourlyRate,
+      regularHoursPerWeek: hoursPerWeek,
+      overtime15HoursPerWeek: 0,
+      overtime20HoursPerWeek: 0,
+      frequency: 'biweekly',
+      mode: 'simple',
+      shiftPremiumType: 'fixed',
+      shiftPremiumAmount: 0,
+      healthInsuranceEmployee: 0,
+      lifeAndDisabilityInsuranceEmployee: 0,
+      dentalInsuranceEmployee: 0,
+      employerTaxableBenefits: 0,
+      groupRrspType: 'percent',
+      groupRrspValue: 0,
+      unionDuesType: 'percent',
+      unionDuesValue: 0,
+      otherDeductionsPerPay: 0,
+    });
+
+    const info = calc.provinceInfo;
+    const colIndex = info.costOfLivingIndex || 100;
+    // Purchasing power = Net / (Cost of Living Index / 100)
+    const adjustedPurchasingPower = (calc.annualNet / colIndex) * 100;
+
+    return {
+      province: code,
+      provinceInfo: info,
+      annualGross: calc.annualGross,
+      biweeklyGross: calc.cascade.biweekly.gross,
+      hourlyRate,
+      annualNet: calc.annualNet,
+      biweeklyNet: calc.cascade.biweekly.net,
+      effectiveHourlyNet: calc.effectiveHourlyRateNet,
+      effectiveTaxRate: calc.effectiveTaxRate,
+      provincialTax: calc.annualProvincialTax,
+      federalTax: calc.annualFederalTax,
+      pensionContrib: calc.annualRRQ,
+      eiContrib: calc.annualAE,
+      adjustedNetPurchasingPower: Math.round(adjustedPurchasingPower),
+    };
+  });
 }

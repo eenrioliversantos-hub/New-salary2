@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useSyncExternalStore } from 'react';
 import { Language } from '@/lib/i18n';
 import { ToolId } from '@/components/ToolboxGrid';
-import { adminStore, B2BSponsorInquiry } from '@/lib/admin-store';
+import { adminStore, B2BSponsorInquiry, AdSlotConfig } from '@/lib/admin-store';
 import {
   Megaphone,
   Building2,
@@ -30,18 +30,36 @@ import {
   Zap,
   Check,
   ArrowLeft,
+  MapPin,
+  Send,
+  Radio,
+  FileCheck,
 } from 'lucide-react';
+
+export type B2BTab = 'catalog' | 'sponsorship' | 'jobs' | 'map';
 
 interface CommercialShowcaseProps {
   lang: Language;
   onSelectTool: (tool: ToolId) => void;
   onOpenProModal?: () => void;
+  initialTab?: B2BTab;
 }
+
+const emptySubscribe = () => () => {};
 
 export const CommercialShowcase: React.FC<CommercialShowcaseProps> = ({
   lang,
   onSelectTool,
+  initialTab = 'catalog',
 }) => {
+  // Active B2B Tab
+  const [activeTab, setActiveTab] = useState<B2BTab>(initialTab);
+
+  // Sync with adminStore to get live dynamic ad slots and jobs
+  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const liveAdSlots = isMounted ? adminStore.getAdSlots() : [];
+  const liveJobPostings = isMounted ? adminStore.getB2BJobs() : [];
+
   // Simulator State
   const [selectedSegment, setSelectedSegment] = useState<'banking' | 'insurance' | 'recruitment' | 'immigration' | 'education'>('banking');
   const [budgetSlider, setBudgetSlider] = useState<number>(550);
@@ -51,8 +69,8 @@ export const CommercialShowcase: React.FC<CommercialShowcaseProps> = ({
   const [selectedDuration, setSelectedDuration] = useState<'monthly' | 'quarterly' | 'biannual' | 'one_time'>('quarterly');
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'banners' | 'sponsorship' | 'content' | 'jobs'>('all');
 
-  // Preview interactive zone
-  const [previewZone, setPreviewZone] = useState<'home-top' | 'salary-results' | 'tools-section' | 'blog-article' | 'footer-wide'>('salary-results');
+  // Interactive Map: Selected space
+  const [selectedMapSpaceId, setSelectedMapSpaceId] = useState<string>('salary-results');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -67,1070 +85,1083 @@ export const CommercialShowcase: React.FC<CommercialShowcaseProps> = ({
   const [submittedInquiry, setSubmittedInquiry] = useState<B2BSponsorInquiry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Dictionary for texts
-  const t = useMemo(() => {
-    return {
-      pt: {
-        badge: 'Mídia Kit & Loteamento de Vitrines Digitais 2026',
-        heroTitle: 'Loteamento de Vitrines & Espaços Comerciais no Québec',
-        heroSubtitle: 'Conecte sua empresa a mais de 48.000 trabalhadores assalariados, novos imigrantes qualificados e gestores no momento exato em que decidem seus rumos financeiros e profissionais.',
-        btnBack: 'Voltar ao Calculador de Salário',
-        btnExploreTools: 'Ver Todas as Ferramentas',
-        proofBadge: 'Métricas Reais Auditadas',
-        proofTitle: 'Por que o PaieNet Converte 15x Mais que Anúncios Tradicionais?',
-        proofSubtitle: 'Nossos usuários não estão navegando passivamente. Eles estão calculando salários líquidos, avaliando ofertas de emprego e decidindo aportes fiscais (REER/CELIAPP). A atenção é 100% ativa.',
-        statSessions: 'Visitantes Únicos / Mês',
-        statTime: 'Tempo Médio por Sessão',
-        statCtr: 'CTR Médio em Vitrines Nativas',
-        statSalary: 'Renda Média Declarada',
-        ctrCompareLabel: '4.6% no PaieNet vs 0.3% em Banners Display Tradicionais',
-        roiSimTitle: 'Simulador de Eficácia & Retorno Projetado',
-        roiSimSubtitle: 'Simule o alcance qualificado e o custo estimado por lead para a sua marca no mercado québécois.',
-        segmentLabel: 'Segmento da sua empresa',
-        budgetLabel: 'Investimento mensal estimado em mídia',
-        estReach: 'Alcance Único Estimado',
-        estClicks: 'Cliques Qualificados',
-        estLeads: 'Leads Quentes Esperados',
-        estCpl: 'Custo por Lead (CPL) Projetado',
-        catalogTitle: 'Matriz de Lotes & Vitrines Disponíveis',
-        catalogSubtitle: 'Escolha a área ideal do portal de acordo com o estágio de intenção do seu cliente.',
-        selectLotBtn: 'Selecionar este Lote',
-        selectedLotBadge: 'Lote Selecionado',
-        zonePreviewTitle: 'Mapa Interativo: Onde sua Marca Aparece',
-        zonePreviewSubtitle: 'Clique nas áreas do site para visualizar o posicionamento exato da sua vitrine.',
-        checkoutTitle: 'Reserve seu Lote ou Encomende um Artigo',
-        checkoutSubtitle: 'Preencha os dados da sua empresa para receber a proposta formal proforma e travar a exclusividade do espaço.',
-        companyLabel: 'Razão Social / Nome da Empresa',
-        contactLabel: 'Nome do Responsável Comercial / Marketing',
-        emailLabel: 'E-mail Corporativo',
-        phoneLabel: 'Telefone / WhatsApp Comercial',
-        websiteLabel: 'Website da Empresa ou Perfil LinkedIn',
-        msgLabel: 'Briefing ou Objetivo da Campanha (Opcional)',
-        msgPlaceholder: 'Ex: Queremos divulgar nosso plano de previdência REER para novos contratados na área de TI em Montreal...',
-        btnSubmit: 'Solicitar Reserva de Lote & Proposta Comercial',
-        successTitle: 'Proposta de Loteamento Registrada com Sucesso!',
-        successMsg: 'Sua solicitação foi encaminhada para a nossa diretoria comercial. Enviamos uma cópia para o seu e-mail corporativo.',
-        protocol: 'Protocolo da Proposta',
-        summaryVal: 'Valor Total Previsto',
-        btnNew: 'Fazer Nova Simulação',
-        btnWhatsapp: 'Falar Diretamente com o Diretor Comercial via WhatsApp',
-      },
-      fr: {
-        badge: 'Kit Média & Emplacements Publicitaires 2026',
-        heroTitle: 'Vitrines Numériques & Partenariats d’Affaires au Québec',
-        heroSubtitle: 'Associez votre entreprise à plus de 48 000 salariés, nouveaux arrivants qualifiés et gestionnaires au moment précis où ils planifient leurs finances et leur carrière.',
-        btnBack: 'Retour au Calculateur de Paie',
-        btnExploreTools: 'Explorer les Outils',
-        proofBadge: 'Mesures & Performances Vérifiées',
-        proofTitle: 'Pourquoi PaieNet Convertit 15× Mieux que la Publicité Traditionnelle ?',
-        proofSubtitle: 'Nos utilisateurs ne font pas du défilement passif : ils calculent leur salaire net, comparent des offres d’emploi et planifient leurs REER/CELIAPP. Une attention captive et intentionnelle.',
-        statSessions: 'Visiteurs Uniques / Mois',
-        statTime: 'Temps Moyen par Session',
-        statCtr: 'CTR Moyen Vitrines Natives',
-        statSalary: 'Revenu Moyen Déclaré',
-        ctrCompareLabel: '4,6 % sur PaieNet vs 0,3 % sur les bannières classiques',
-        roiSimTitle: 'Simulateur d’Efficacité & Retour sur Investissement',
-        roiSimSubtitle: 'Évaluez la portée ciblée et le coût par prospect qualifié pour votre entreprise sur le marché québécois.',
-        segmentLabel: 'Secteur d’activité',
-        budgetLabel: 'Budget publicitaire mensuel estimé',
-        estReach: 'Portée Unique Estimée',
-        estClicks: 'Clics Qualifiés Projetés',
-        estLeads: 'Prospects Clés Estimés',
-        estCpl: 'Coût par Prospect (CPL)',
-        catalogTitle: 'Grille des Emplacements & Lots Publicitaires',
-        catalogSubtitle: 'Choisissez l’espace stratégique adapté à vos objectifs d’acquisition ou de notoriété.',
-        selectLotBtn: 'Sélectionner cet Emplacement',
-        selectedLotBadge: 'Emplacement Sélectionné',
-        zonePreviewTitle: 'Plan Interactif : Où s’affiche votre Marque',
-        zonePreviewSubtitle: 'Cliquez sur les zones du portail pour prévisualiser l’intégration de votre annonce.',
-        checkoutTitle: 'Réservez votre Emplacement ou Commandez un Article',
-        checkoutSubtitle: 'Transmettez les coordonnées de votre organisation pour bloquer l’exclusivité du lot.',
-        companyLabel: 'Organisation ou Entreprise',
-        contactLabel: 'Responsable des Partenariats / Marketing',
-        emailLabel: 'Courriel Professionnel',
-        phoneLabel: 'Téléphone Professionnel / Cellulaire',
-        websiteLabel: 'Site Internet de l’Entreprise',
-        msgLabel: 'Objectif de la Campagne (Optionnel)',
-        msgPlaceholder: 'Ex: Promotion de nos régimes collectifs REER pour les entreprises québécoises...',
-        btnSubmit: 'Transmettre la Demande de Réservation & Devis',
-        successTitle: 'Demande d’Emplacement Reçue avec Succès !',
-        successMsg: 'Votre dossier a été transmis à notre équipe commerciale. Nous communiquerons avec vous sous 24 heures ouvrables.',
-        protocol: 'Numéro de Demande',
-        summaryVal: 'Montant Estimé',
-        btnNew: 'Nouvelle Simulation',
-        btnWhatsapp: 'Contacter l’Équipe Partenariats via WhatsApp',
-      },
-      en: {
-        badge: 'Media Kit & Digital Advertising Lots 2026',
-        heroTitle: 'Commercial Showcase & Digital Billboard Lots in Quebec',
-        heroSubtitle: 'Connect your business with over 48,000 salaried employees, skilled newcomers, and managers right as they make critical financial and career decisions.',
-        btnBack: 'Back to Net Calculator',
-        btnExploreTools: 'Explore All Tools',
-        proofBadge: 'Audited Live Metrics',
-        proofTitle: 'Why PaieNet Converts 15x Higher than Traditional Ads',
-        proofSubtitle: 'Our audience is not passively scrolling. They are calculating their net paystubs, comparing job offers, and setting up RRSP tax shelters. Pure high-intent attention.',
-        statSessions: 'Unique Visitors / Month',
-        statTime: 'Average Session Duration',
-        statCtr: 'Native Placement Average CTR',
-        statSalary: 'Declared Average Income',
-        ctrCompareLabel: '4.6% on PaieNet vs 0.3% on Standard Display Banners',
-        roiSimTitle: 'ROI & Lead Projection Simulator',
-        roiSimSubtitle: 'Simulate your qualified reach and estimated cost-per-lead within the Quebec workforce.',
-        segmentLabel: 'Your Business Category',
-        budgetLabel: 'Estimated Monthly Media Budget',
-        estReach: 'Estimated Unique Reach',
-        estClicks: 'Projected Qualified Clicks',
-        estLeads: 'Expected Direct Leads',
-        estCpl: 'Estimated Cost Per Lead (CPL)',
-        catalogTitle: 'Available Billboard Lots & Advertising Matrix',
-        catalogSubtitle: 'Select the optimal space tailored to your customer acquisition and branding funnel.',
-        selectLotBtn: 'Select this Lot',
-        selectedLotBadge: 'Selected Lot',
-        zonePreviewTitle: 'Interactive Site Blueprint: Ad Placement Preview',
-        zonePreviewSubtitle: 'Click on portal zones to inspect the live render and context of your banner.',
-        checkoutTitle: 'Reserve Your Lot or Commission a Sponsored Article',
-        checkoutSubtitle: 'Submit your organization details to lock in category exclusivity and generate a formal quote.',
-        companyLabel: 'Company Name / Entity',
-        contactLabel: 'Marketing / Partnerships Lead Name',
-        emailLabel: 'Corporate Email',
-        phoneLabel: 'Business Phone / Mobile',
-        websiteLabel: 'Company Website or LinkedIn',
-        msgLabel: 'Campaign Brief or Target Goals (Optional)',
-        msgPlaceholder: 'E.g., We want to feature our group insurance solutions for Quebec tech workers...',
-        btnSubmit: 'Request Lot Reservation & Formal Quote',
-        successTitle: 'Lot Reservation Request Successfully Submitted!',
-        successMsg: 'Your commercial proposal has been registered in our system. Our partnerships director will review and follow up promptly.',
-        protocol: 'Proposal Reference',
-        summaryVal: 'Estimated Campaign Value',
-        btnNew: 'Start New Simulation',
-        btnWhatsapp: 'Chat Directly with Partnerships Director on WhatsApp',
-      },
-    }[lang];
-  }, [lang]);
-
-  // Available Lots Matrix
-  const lots = useMemo(() => [
+  // Complete List of All Available Advertising Spaces across all portal pages
+  const allPortalSpaces = useMemo(() => [
     {
       id: 'home-top',
-      name: lang === 'pt' ? 'Lote 1: Header Leaderboard (Topo Global)' : lang === 'fr' ? 'Lot 1 : En-tête Principal (Leaderboard Top)' : 'Lot 1: Top Header Leaderboard',
-      category: lang === 'pt' ? 'Visibilidade Institucional' : lang === 'fr' ? 'Notoriété & Image' : 'Brand Visibility',
-      badge: lang === 'pt' ? 'Máxima Exposição' : lang === 'fr' ? 'Visibilité Maximale' : 'Maximum Reach',
-      badgeColor: 'blue',
+      name: lang === 'pt' ? '1. Topo Header Global (Leaderboard)' : lang === 'fr' ? '1. En-tête Principal (Leaderboard Top)' : '1. Top Header Global Leaderboard',
+      page: 'Home / Calculateur Principal',
+      urlPath: '/?tool=net-calc#home-top',
+      dimensions: '728×90 px (Desktop) / 320×50 px (Mobile)',
       monthlyPriceCad: 380,
-      format: '728×90 / Responsivo Mobile',
-      impressionsEst: '35.000+ visualizações/mês',
-      ctrEst: '3.8% CTR',
-      suitableFor: lang === 'pt' ? 'Bancos, Cooperativas (Desjardins/BMO), Telecomunicações, Seguradoras' : 'Banques, Télécoms, Assurances collectives',
-      description: lang === 'pt'
-        ? 'Primeiro elemento visível logo abaixo do cabeçalho da calculadora. Reconhecimento imediato de marca.'
-        : 'Premier élément visuel au-dessus de la calculatrice. Idéal pour ancrer votre marque dans le paysage québécois.',
-      icon: Megaphone,
+      monthlyViews: '35.000+',
+      avgCtr: '3.8%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Disponível para Reserva' : 'Disponible',
+      bestFor: lang === 'pt' ? 'Bancos, Cooperativas (Desjardins/BMO), Telecomunicações' : 'Banques, Télécoms, Assurances collectives',
+      description: lang === 'pt' ? 'Primeiro elemento visível no carregamento do portal, logo abaixo do cabeçalho de navegação.' : 'Premier élément visuel au-dessus de la calculatrice de paie.',
+      previewSnippet: 'Banner Leaderboard Institucional com logo, chamada comercial e botão direto rastreado com UTM.',
     },
     {
       id: 'salary-results',
-      name: lang === 'pt' ? 'Lote 2: Pós-Contracheque & Resultados de Salário' : lang === 'fr' ? 'Lot 2 : Post-Talon de Paie (Zone Prime)' : 'Lot 2: Post-Paystub Results (Prime Zone)',
-      category: lang === 'pt' ? 'Altíssima Conversão Financeira' : lang === 'fr' ? 'Conversion Financière Élevée' : 'High Financial Intent',
-      badge: lang === 'pt' ? 'Mais Cobiçado' : lang === 'fr' ? 'Plus Demandé' : 'Most In-Demand',
-      badgeColor: 'emerald',
+      name: lang === 'pt' ? '2. Pós-Salário Líquido (Zona Prime de Conversão)' : lang === 'fr' ? '2. Post-Talon de Paie (Zone Prime)' : '2. Post-Net Paystub (Prime Conversion Zone)',
+      page: 'Página de Resultados & Contracheque',
+      urlPath: '/?tool=net-calc#salary-results',
+      dimensions: '640×160 px (Responsive Wide)',
       monthlyPriceCad: 520,
-      format: 'Banner Contextual Wide (640×160)',
-      impressionsEst: '28.000+ cálculos concluídos/mês',
-      ctrEst: '5.4% CTR',
-      suitableFor: lang === 'pt' ? 'Planos REER / CELIAPP, Cartões de Crédito sem anuidade, Empréstimos hipotecários' : 'Comptes REER/CELIAPP, Prêts, Cartes de crédit',
-      description: lang === 'pt'
-        ? 'Posicionado imediatamente após a linha do salário líquido e deduções de impostos. O momento em que o usuário busca como economizar.'
-        : 'S’affiche après le calcul du salaire net. C’est l’instant où l’utilisateur cherche à optimiser ses déductions.',
-      icon: DollarSign,
+      monthlyViews: '28.000+',
+      avgCtr: '5.4%',
+      status: 'high_demand',
+      statusLabel: lang === 'pt' ? 'Mais Cobiçado (Alta Intenção)' : 'Zone Prime à Forte Intention',
+      bestFor: lang === 'pt' ? 'Planos REER / CELIAPP, Empréstimos, Cartões de Crédito sem anuidade' : 'Comptes REER/CELIAPP, Prêts personnels, Cartes de crédit',
+      description: lang === 'pt' ? 'Exibido imediatamente após a linha do salário líquido e deduções de impostos.' : 'S’affiche directement sous le résultat net en poche calculé.',
+      previewSnippet: 'Destaque nativo com cálculo de economia fiscal e botão direto de abertura de conta ou simulação.',
     },
     {
-      id: 'tool-takeover',
-      name: lang === 'pt' ? 'Lote 3: Patrocínio Exclusivo de Ferramenta (Tool Takeover)' : lang === 'fr' ? 'Lot 3 : Commandite Exclusive d’Outil' : 'Lot 3: Exclusive Tool Takeover',
-      category: lang === 'pt' ? 'Associação Temática Direta' : lang === 'fr' ? 'Affinité Thématique Directe' : 'Direct Niche Affinity',
-      badge: lang === 'pt' ? 'Exclusividade de Nicho' : lang === 'fr' ? 'Exclusivité Thématique' : 'Niche Exclusive',
-      badgeColor: 'purple',
+      id: 'tools-section',
+      name: lang === 'pt' ? '3. Faixa Superior da Grade de Ferramentas' : lang === 'fr' ? '3. Ruban de la Boîte à Outils' : '3. Toolbox Grid Showcase Ribbon',
+      page: 'Seção de Ferramentas / Toolbox',
+      urlPath: '/#toolbox-section',
+      dimensions: '728×90 px / Responsive Card',
+      monthlyPriceCad: 340,
+      monthlyViews: '22.000+',
+      avgCtr: '4.1%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Disponível' : 'Disponible',
+      bestFor: lang === 'pt' ? 'Agências de Recrutamento, Cursos de Francês, Softwares de Ponto e Folha' : 'Agences de placement, Écoles de langues, Logiciels RH',
+      description: lang === 'pt' ? 'Posicionado no divisor que conecta os cálculos à grade de todas as ferramentas úteis.' : 'Positionné entre la calculatrice et la grille complète des outils professionnels.',
+      previewSnippet: 'Faixa destacada com slogan da sua empresa conectando trabalhadores a novas oportunidades de carreira.',
+    },
+    {
+      id: 'comparator-spotlight',
+      name: lang === 'pt' ? '4. Destaque no Comparador Interprovincial' : lang === 'fr' ? '4. Encart Comparateur Interprovincial' : '4. Interprovincial Comparator Spotlight',
+      page: 'Comparador de Salários entre Províncias',
+      urlPath: '/?tool=canada-provinces',
+      dimensions: 'Native Box 600×140 px',
       monthlyPriceCad: 420,
-      format: 'Chancela Oficial "Apresentado por..." + Banner Integrado',
-      impressionsEst: '18.000+ sessões ativas/mês',
-      ctrEst: '4.9% CTR',
-      suitableFor: lang === 'pt' ? 'Agências de Recrutamento, Escolas de Francês, Softwares de Folha de Pagamento' : 'Agences RH, Écoles de langues, Logiciels de paie',
-      description: lang === 'pt'
-        ? 'Sua marca assume a chancela de uma das ferramentas (ex: Simulador de Entrevistas STAR ou Comparador de Empregos).'
-        : 'Votre logo et offre accompagnent un simulateur clé (ex: Entrevues STAR ou Comparateur d’offres).',
-      icon: Target,
+      monthlyViews: '19.000+',
+      avgCtr: '5.1%',
+      status: 'exclusive',
+      statusLabel: lang === 'pt' ? 'Exclusividade de Categoria' : 'Exclusivité Thématique',
+      bestFor: lang === 'pt' ? 'Empresas de Mudança, Câmbio Internacional (Wise), Bancos com atuação nacional' : 'Services de déménagement, Banques nationales, Remises d’argent',
+      description: lang === 'pt' ? 'Exibido no comparador frente a frente para quem está planejando mudar de província no Canadá.' : 'Intégré au comparateur des 13 provinces et territoires pour les travailleurs mobiles.',
+      previewSnippet: 'Sua marca como parceira oficial de quem está se mudando para o Québec, Ontário ou Alberta.',
     },
     {
-      id: 'blog-sponsored',
-      name: lang === 'pt' ? 'Lote 4: Artigo Patrocinado sob Encomenda (Do-Follow & SEO)' : lang === 'fr' ? 'Lot 4 : Article Commandité Sur-Mesure (SEO)' : 'Lot 4: Sponsored Editorial & SEO Article',
-      category: lang === 'pt' ? 'Autoridade Orgânica Permanente' : lang === 'fr' ? 'Autorité SEO Permanente' : 'Permanent Organic Authority',
-      badge: lang === 'pt' ? 'Pagamento Único Vitalício' : lang === 'fr' ? 'Paiement Unique & Durable' : 'One-Time Lifetime Post',
-      badgeColor: 'amber',
-      monthlyPriceCad: 290,
-      format: 'Artigo Editorial Completo de 1.200+ palavras + Links Do-Follow',
-      impressionsEst: 'Permanente no Google + Indexação Rápida',
-      ctrEst: '6.2% CTR Orgânico',
-      suitableFor: lang === 'pt' ? 'Advogados de Imigração, Contabilidade CPA, Consultorias de Relocação, Softwares SaaS' : 'Avocats immigration, Cabinets CPA, Logiciels SaaS',
-      description: lang === 'pt'
-        ? 'Artigo informativo escrito com rigor fiscal pela nossa equipe, focado nas palavras-chave da sua solução e com links permanentes.'
-        : 'Article éditorial de référence rédigé selon les normes québécoises avec liens directs vers votre produit.',
-      icon: FileText,
-    },
-    {
-      id: 'b2b-job-spot',
-      name: lang === 'pt' ? 'Lote 5: Vaga de Emprego B2B em Destaque (30 Dias)' : lang === 'fr' ? 'Lot 5 : Offre d’Emploi B2B Vedette (30 Jours)' : 'Lot 5: Featured B2B Job Posting (30 Days)',
-      category: lang === 'pt' ? 'Recrutamento Qualificado' : lang === 'fr' ? 'Recrutement Qualifié' : 'Talent Acquisition',
-      badge: lang === 'pt' ? 'Aceleração de Contratação' : lang === 'fr' ? 'Embauche Rapide' : 'Hiring Fast-Track',
-      badgeColor: 'blue',
-      monthlyPriceCad: 89,
-      format: 'Card em Destaque no Mural B2B + Topo do Comparador',
-      impressionsEst: '12.000+ visualizações de candidatos',
-      ctrEst: '7.1% CTR de Aplicação',
-      suitableFor: lang === 'pt' ? 'Empresas em busca de desenvolvedores, engenheiros, operadores industriais e analistas' : 'Employeurs cherchant des talents qualifiés au Québec',
-      description: lang === 'pt'
-        ? 'Destaque prioritário da sua vaga aberta para profissionais que usam nossas ferramentas para calcular seu próximo salário.'
-        : 'Mettez en avant vos offres d’emploi auprès de professionnels analysant le marché du travail.',
-      icon: Briefcase,
-    },
-    {
-      id: 'combo-360',
-      name: lang === 'pt' ? 'Lote 6: Pacote Combo Vitrine 360° (Presença Omnichannel)' : lang === 'fr' ? 'Lot 6 : Forfait Vitrine 360° (Omnicanal)' : 'Lot 6: Omnichannel 360° Showcase Bundle',
-      category: lang === 'pt' ? 'Domínio Total da Plataforma' : lang === 'fr' ? 'Visibilité Totale' : 'Total Platform Domination',
-      badge: lang === 'pt' ? 'Melhor ROI (Economia 35%)' : lang === 'fr' ? 'Meilleur ROI (-35%)' : 'Best Value (-35%)',
-      badgeColor: 'emerald',
-      monthlyPriceCad: 890,
-      format: 'Banner Topo + Banner Resultados + 1 Artigo Patrocinado + 1 Disparo de Newsletter',
-      impressionsEst: '60.000+ pontos de contato multicanal',
-      ctrEst: '5.8% CTR Médio',
-      suitableFor: lang === 'pt' ? 'Grandes marcas, fintechs em lançamento e corporações querendo liderança no Québec' : 'Grandes institutions et fintechs visant le leadership',
-      description: lang === 'pt'
-        ? 'Combinação poderosa que cerca o usuário em todas as etapas: ao entrar no site, ao calcular e ao receber nossos e-mails.'
-        : 'Visibilité complète sur le portail et dans notre infolettre pour une notoriété maximale.',
-      icon: Zap,
-    },
-    {
-      id: 'category-sponsor',
-      name: lang === 'pt' ? 'Lote 7: Patrocínio Exclusivo de Seção ou Categoria Inteira' : lang === 'fr' ? 'Lot 7 : Commandite Exclusive de Section Complète' : 'Lot 7: Category & Portal Section Exclusive Sponsorship',
-      category: lang === 'pt' ? 'Patrocínio Institucional & Domínio de Categoria' : lang === 'fr' ? 'Leadership Thématique' : 'Category Domination',
-      badge: lang === 'pt' ? 'Exclusividade Absoluta' : lang === 'fr' ? 'Exclusivité Totale' : '100% Category Exclusivity',
-      badgeColor: 'purple',
-      monthlyPriceCad: 680,
-      format: 'Chancela no Topo da Categoria + Banners em Todos os Artigos da Seção + Selo Oficial',
-      impressionsEst: '50.000+ exibições ultra-qualificadas/mês',
-      ctrEst: '5.6% CTR',
-      suitableFor: lang === 'pt' ? 'Bancos para "Seção Salário & Impostos", Advogados para "Seção Imigração & CNESST", Corretoras para "Seção REER"' : 'Institutions financières, Cabinets juridiques, Assurances',
-      description: lang === 'pt'
-        ? 'Associe sua marca de forma definitiva a um tema específico. Sua empresa vira a parceira oficial daquela categoria com logotipo de chancela "Seção apoiada por [Sua Empresa]".'
-        : 'Devenez le partenaire officiel d’une section entière du portail avec présence exclusive sur tous les outils et articles associés.',
-      icon: Award,
-    },
-    {
-      id: 'pdf-cobranding',
-      name: lang === 'pt' ? 'Lote 8: Co-Branding nos Holerites & Relatórios PDF Gerados' : lang === 'fr' ? 'Lot 8 : Co-Marquage sur les Fiches de Paie PDF' : 'Lot 8: Co-Branding on Official Downloaded Paystub PDFs',
-      category: lang === 'pt' ? 'Documentos Oficiais & Retenção Perene' : lang === 'fr' ? 'Documents Officiels Pérennes' : 'Official Documents Long-Tail',
-      badge: lang === 'pt' ? 'Retenção por Anos' : lang === 'fr' ? 'Visibilité Durable' : 'Multi-Year Retention',
-      badgeColor: 'emerald',
+      id: 'resume-builder',
+      name: lang === 'pt' ? '5. Chancela no Construtor de Currículos ATS' : lang === 'fr' ? '5. Commandite Créateur de CV Canadien' : '5. ATS Resume Builder Co-Branding',
+      page: 'Construtor de CV Format Canadien',
+      urlPath: '/?tool=resume-builder',
+      dimensions: 'Logo de Chancela + Banner de Envio 300×250',
       monthlyPriceCad: 450,
-      format: 'Logotipo Oficial + Chamada de Conta Salário / Benefício no Cabeçalho do PDF A4',
-      impressionsEst: '14.000+ PDFs baixados por trabalhadores/mês',
-      ctrEst: 'Alta conversão em impressão',
-      suitableFor: lang === 'pt' ? 'Contas-salário bancárias, planos de previdência corporativos e crédito consignado' : 'Comptes salaires, Régimes collectifs, Financement',
-      description: lang === 'pt'
-        ? 'Os trabalhadores baixam o PDF oficial de holerite para apresentar a proprietários de imóveis, bancos e imigração. Sua marca é impressa com destaque no cabeçalho.'
-        : 'Chaque utilisateur exporte sa fiche de paie en PDF officiel. Votre marque et offre y sont intégrées de façon permanente.',
-      icon: FileText,
+      monthlyViews: '16.000+',
+      avgCtr: '6.2%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Disponível' : 'Disponible',
+      bestFor: lang === 'pt' ? 'Empresas com Vagas Abertas, Consultorias de RH, Plataformas de Vagas' : 'Plateformes d’emploi, Cabinets de recrutement, Job boards',
+      description: lang === 'pt' ? 'Chancela oficial "Envie seu currículo recém-gerado diretamente para as vagas da [Sua Empresa]".' : 'Permet aux candidats ayant terminé leur CV de postuler en un clic chez vous.',
+      previewSnippet: 'Aparece na tela final após a conclusão do currículo formatado no padrão canadense.',
     },
     {
-      id: 'newsletter-dedicated',
-      name: lang === 'pt' ? 'Lote 9: Disparo Dedicado na Newsletter Semanal (Infolettre)' : lang === 'fr' ? 'Lot 9 : Infolettre Dédiée Exclusive' : 'Lot 9: Exclusive Dedicated Newsletter Blast',
-      category: lang === 'pt' ? 'Marketing Direto de Alta Conversão' : lang === 'fr' ? 'Marketing Direct Qualifié' : 'Direct Email Acquisition',
-      badge: lang === 'pt' ? '42% Taxa de Abertura' : lang === 'fr' ? '42% Taux d’Ouverture' : '42% Open Rate',
-      badgeColor: 'amber',
-      monthlyPriceCad: 350,
-      format: 'Disparo 100% Exclusivo para Base Cadastrada de Trabalhadores do Québec',
-      impressionsEst: 'Base engajada e ativa com cliques diretos',
-      ctrEst: '8.4% CTR em E-mail',
-      suitableFor: lang === 'pt' ? 'Lançamentos de produtos, eventos de contratação, feiras de emprego e promoções com prazo' : 'Lancements, Recrutement massif, Offres limitées',
-      description: lang === 'pt'
-        ? 'E-mail marketing direto e exclusivo enviado sem concorrentes para nossa lista VIP de profissionais e novos imigrantes assalariados.'
-        : 'Campagne de courriel dédiée envoyée à nos abonnés actifs sur le marché du travail québécois.',
-      icon: Megaphone,
+      id: 'interview-simulator',
+      name: lang === 'pt' ? '6. Patrocínio do Simulador de Entrevistas STAR' : lang === 'fr' ? '6. Commandite Simulateur d’Entrevues STAR' : '6. STAR Interview Simulator Takeover',
+      page: 'Simulador de Entrevistas Comportamentais',
+      urlPath: '/?tool=interview-simulator',
+      dimensions: 'Native Card Interativo 540×120 px',
+      monthlyPriceCad: 390,
+      monthlyViews: '14.000+',
+      avgCtr: '4.8%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Disponível' : 'Disponible',
+      bestFor: lang === 'pt' ? 'Escolas de Francês (UQAM/Concordia), Coaching de Carreira, Cursos de Francês Profissional' : 'Écoles de francisation, Formations continues, Coachs de carrière',
+      description: lang === 'pt' ? 'Posicionado no topo das perguntas de entrevista, onde profissionais treinam respostas comportamentais.' : 'Offert aux candidats en préparation intensive d’entrevue d’embauche.',
+      previewSnippet: 'Destaque como centro preparatório de idiomas ou coaching parceiro para aprovação em vagas no Québec.',
+    },
+    {
+      id: 'blog-article',
+      name: lang === 'pt' ? '7. Artigo de Blog Nativo Patrocinado (SEO)' : lang === 'fr' ? '7. Article Commandité & Do-Follow Permanent' : '7. Sponsored Native Article & Do-Follow Backlink',
+      page: 'Blog & Conhecimento Fiscal',
+      urlPath: '/?tool=blog',
+      dimensions: 'Artigo Completo com Fotos + Links Do-Follow',
+      monthlyPriceCad: 490,
+      monthlyViews: 'Vitalício (Tráfego Orgânico)',
+      avgCtr: '7.5%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Investimento Único / Vitalício' : 'Paiement Unique / Permanent',
+      bestFor: lang === 'pt' ? 'Fintechs, Empresas de Imigração, Consultorias Fiscais, Seguradoras' : 'Fintechs, Avocats en immigration, Firmes de comptables CPA',
+      description: lang === 'pt' ? 'Publicação permanente indexada no Google com recomendação da sua solução e 2 links do-follow.' : 'Référencement SEO pérenne avec autorité de domaine et liens indexés sur Google.',
+      previewSnippet: 'Artigo editorial de 1.200 palavras escrito por nossa equipe jornalística focado nas buscas do seu nicho.',
+    },
+    {
+      id: 'resources-hub',
+      name: lang === 'pt' ? '8. Patrocínio no Acervo de Guias & Infoprodutos' : lang === 'fr' ? '8. Commandite Centre de Téléchargements' : '8. Resource Library Header Spotlight',
+      page: 'Acervo de Guias & E-books',
+      urlPath: '/?tool=resources',
+      dimensions: 'Banner Topo 600×140 + Co-branding nos PDFs',
+      monthlyPriceCad: 460,
+      monthlyViews: '18.000+',
+      avgCtr: '5.8%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Disponível' : 'Disponible',
+      bestFor: lang === 'pt' ? 'Marcas institucionais que querem associação a autoridade e conhecimento técnico' : 'Institutions d’enseignement, Associations professionnelles',
+      description: lang === 'pt' ? 'Sua marca estampada no topo da biblioteca de guias fiscais e templates de currículo.' : 'Visibilité maximale sur la page de ressources gratuites et guides officiels.',
+      previewSnippet: 'Associação direta a todo material baixado por profissionais e novos residentes no Québec.',
+    },
+    {
+      id: 'footer-wide',
+      name: lang === 'pt' ? '9. Rodapé Amplo Global (Super-Banner)' : lang === 'fr' ? '9. Super-Bannière Bas de Page (Global)' : '9. Global Footer Super-Banner',
+      page: 'Rodapé de Todas as Páginas',
+      urlPath: '/#footer-sponsor',
+      dimensions: '970×90 px / 728×90 px Responsivo',
+      monthlyPriceCad: 290,
+      monthlyViews: '48.000+ (Todas as Páginas)',
+      avgCtr: '2.9%',
+      status: 'available',
+      statusLabel: lang === 'pt' ? 'Excelente Custo/Alcance' : 'Portée Maximale Économique',
+      bestFor: lang === 'pt' ? 'Marcas de consumo, Supermercados (Costco/Maxi), Planos de telefonia celular (Fizz/Koodo)' : 'Grande distribution, Forfaits cellulaires, Assurances auto',
+      description: lang === 'pt' ? 'Exibido em 100% das páginas do portal no momento em que o leitor atinge a base.' : 'Présence continue sur l’ensemble du site Web PaieNet Québec.',
+      previewSnippet: 'Visibilidade ubíqua e constante em toda a audiência que navega no site.',
     },
   ], [lang]);
 
-  // Current selected lot data
-  const currentLot = useMemo(() => {
-    return lots.find((l) => l.id === selectedLotId) || lots[0];
-  }, [lots, selectedLotId]);
+  // Selected space object
+  const currentMapSpace = useMemo(() => {
+    return allPortalSpaces.find((s) => s.id === selectedMapSpaceId) || allPortalSpaces[1];
+  }, [allPortalSpaces, selectedMapSpaceId]);
 
-  // Price calculations based on duration
-  const calculatedPriceCad = useMemo(() => {
-    const base = currentLot.monthlyPriceCad;
-    if (selectedDuration === 'one_time') {
-      return base;
-    }
-    if (selectedDuration === 'monthly') {
-      return base;
-    }
-    if (selectedDuration === 'quarterly') {
-      return Math.round(base * 3 * 0.85); // 15% discount
-    }
-    if (selectedDuration === 'biannual') {
-      return Math.round(base * 6 * 0.75); // 25% discount
-    }
-    return base;
-  }, [currentLot, selectedDuration]);
-
-  // ROI Calculator Calculations
+  // ROI Calculator helper
   const roiCalculations = useMemo(() => {
-    const budget = budgetSlider;
-    let multiplier = 1.0;
-    if (selectedSegment === 'banking') multiplier = 1.15;
-    if (selectedSegment === 'insurance') multiplier = 1.25;
-    if (selectedSegment === 'recruitment') multiplier = 1.4;
-    if (selectedSegment === 'immigration') multiplier = 1.3;
+    const baseCpl =
+      selectedSegment === 'banking' ? 22 :
+      selectedSegment === 'insurance' ? 26 :
+      selectedSegment === 'recruitment' ? 18 :
+      selectedSegment === 'immigration' ? 28 : 16;
 
-    const estimatedImpressions = Math.round(budget * 68 * multiplier);
-    const estimatedClicks = Math.round(estimatedImpressions * 0.046);
-    const estimatedLeads = Math.max(3, Math.round(estimatedClicks * 0.16));
-    const estimatedCpl = Math.max(12, Math.round((budget / estimatedLeads) * 10) / 10);
+    const estimatedLeads = Math.max(1, Math.round(budgetSlider / baseCpl));
+    const estimatedClicks = Math.round(estimatedLeads * 5.8);
+    const estimatedImpressions = Math.round(estimatedClicks * 22);
 
     return {
       impressions: estimatedImpressions.toLocaleString(),
       clicks: estimatedClicks.toLocaleString(),
-      leads: estimatedLeads.toLocaleString(),
-      cpl: estimatedCpl.toFixed(2),
+      leads: estimatedLeads,
+      cpl: baseCpl,
     };
-  }, [budgetSlider, selectedSegment]);
+  }, [selectedSegment, budgetSlider]);
 
-  // Submit Handler
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle Form Submission
+  const handleSubmitInquiry = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.companyName || !formData.email || !formData.contactName) {
-      alert(lang === 'pt' ? 'Por favor preencha nome, empresa e e-mail corporativo.' : 'Veuillez remplir le nom, entreprise et courriel.');
-      return;
-    }
-
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const inquiry = adminStore.submitB2BSponsorInquiry({
-        companyName: formData.companyName,
-        contactName: formData.contactName,
-        email: formData.email,
-        phone: formData.phone || undefined,
-        websiteUrl: formData.websiteUrl || undefined,
-        slotId: currentLot.id,
-        slotName: currentLot.name,
-        billingDuration: selectedDuration,
-        priceCad: calculatedPriceCad,
-        message: formData.message || undefined,
-      });
+    const targetSpace = allPortalSpaces.find((s) => s.id === selectedLotId) || currentMapSpace;
+    const protocolCode = `B2B-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      setSubmittedInquiry(inquiry);
+    const savedInquiry = adminStore.submitB2BSponsorInquiry({
+      companyName: formData.companyName,
+      contactName: formData.contactName,
+      email: formData.email,
+      phone: formData.phone,
+      websiteUrl: formData.websiteUrl,
+      slotId: targetSpace.id,
+      slotName: targetSpace.name,
+      billingDuration: selectedDuration,
+      priceCad: targetSpace.monthlyPriceCad,
+      message: formData.message,
+    });
+
+    setTimeout(() => {
+      setSubmittedInquiry(savedInquiry);
       setIsSubmitting(false);
     }, 600);
   };
 
   return (
-    <div className="space-y-12 max-w-6xl mx-auto pb-16">
-      {/* 1. Header Bar with Back Button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900 text-white p-4 sm:p-6 rounded-3xl shadow-xl">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
-            <Building2 className="w-3.5 h-3.5" />
-            <span>{t.badge}</span>
+    <div className="space-y-8">
+      {/* 1. Header Banner & Sub-Navigation between Dedicated B2B Pages */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl space-y-6 relative overflow-hidden">
+        <div className="relative z-10 max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
+            <Building2 className="w-3.5 h-3.5 text-blue-400" />
+            <span>PaieNet Corporate & B2B Solutions 2026</span>
           </div>
-          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
-            {t.heroTitle}
+
+          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+            {lang === 'pt'
+              ? 'Publicidade, Patrocínios & Recrutamento Corporativo no Québec'
+              : lang === 'fr'
+              ? 'Solutions d’Affaires, Commandites & Recrutement au Québec'
+              : 'Corporate Advertising, Sponsorships & Hiring in Quebec'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
-            {t.heroSubtitle}
+
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+            {lang === 'pt'
+              ? 'Conecte sua marca ou suas vagas a mais de 48.000 profissionais com renda média de $72.400 CAD, no momento exato em que decidem seus rumos financeiros, fiscais e profissionais.'
+              : lang === 'fr'
+              ? 'Associez votre entreprise à plus de 48 000 salariés et cadres qualifiés au moment où ils planifient leurs finances et leur carrière.'
+              : 'Connect your corporate brand with over 48,000 active Quebec workers calculating paystubs and comparing careers.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => onSelectTool('net-calc')}
-            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{t.btnBack}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Audited Live Performance Stats (Prova de Eficácia) */}
-      <div className="space-y-6">
-        <div className="text-center max-w-3xl mx-auto space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold border border-emerald-200">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{t.proofBadge}</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {t.proofTitle}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            {t.proofSubtitle}
-          </p>
-        </div>
-
-        {/* 4 Pillars Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <Users className="w-5 h-5" />
-            </div>
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 block">48.500+</span>
-            <span className="text-xs font-semibold text-slate-500 block leading-tight">{t.statSessions}</span>
-            <span className="text-[10px] text-blue-600 font-bold block pt-1 border-t border-slate-100">
-              92% Georreferenciado no Québec
-            </span>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
-            </div>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-600 block">4m 38s</span>
-            <span className="text-xs font-semibold text-slate-500 block leading-tight">{t.statTime}</span>
-            <span className="text-[10px] text-emerald-600 font-bold block pt-1 border-t border-slate-100">
-              3.8x superior à média da web (1m12s)
-            </span>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-              <MousePointerClick className="w-5 h-5" />
-            </div>
-            <span className="text-2xl sm:text-3xl font-black text-indigo-600 block">4.6%</span>
-            <span className="text-xs font-semibold text-slate-500 block leading-tight">{t.statCtr}</span>
-            <span className="text-[10px] text-indigo-600 font-bold block pt-1 border-t border-slate-100">
-              {t.ctrCompareLabel}
-            </span>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 block">$72.400 CAD</span>
-            <span className="text-xs font-semibold text-slate-500 block leading-tight">{t.statSalary}</span>
-            <span className="text-[10px] text-amber-700 font-bold block pt-1 border-t border-slate-100">
-              Alto poder aquisitivo & bancarização
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Interactive ROI & Lead Projection Simulator */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl space-y-6">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{t.roiSimTitle}</span>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-black text-white">
-            {t.roiSimTitle}
-          </h3>
-          <p className="text-xs sm:text-sm text-slate-300">
-            {t.roiSimSubtitle}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2">
-          {/* Controls */}
-          <div className="lg:col-span-6 space-y-5">
-            <div>
-              <label className="text-xs font-bold text-slate-300 block mb-2">
-                {t.segmentLabel}
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { id: 'banking', label: 'Bancos / Fintech' },
-                  { id: 'insurance', label: 'Seguros & Benefícios' },
-                  { id: 'recruitment', label: 'RH & Vagas' },
-                  { id: 'immigration', label: 'Imigração & Jurídico' },
-                  { id: 'education', label: 'Idiomas & Cursos' },
-                ].map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedSegment(s.id as any)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                      selectedSegment === s.id
-                        ? 'bg-blue-600 border-blue-400 text-white shadow-md'
-                        : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs font-bold text-slate-300 mb-2">
-                <span>{t.budgetLabel}</span>
-                <span className="text-emerald-400 text-base font-black">${budgetSlider} CAD/mês</span>
-              </div>
-              <input
-                type="range"
-                min="250"
-                max="2500"
-                step="50"
-                value={budgetSlider}
-                onChange={(e) => setBudgetSlider(Number(e.target.value))}
-                className="w-full accent-blue-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                <span>$250 CAD (Teste)</span>
-                <span>$1.000 CAD (Aceleração)</span>
-                <span>$2.500 CAD (Liderança)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Results Projection */}
-          <div className="lg:col-span-6 bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-300 block">
-              Projeção Estimada Baseada em Dados Históricos
-            </span>
-
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="text-xl sm:text-2xl font-black text-white block">{roiCalculations.impressions}</span>
-                <span className="text-[11px] text-slate-400 block">{t.estReach}</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="text-xl sm:text-2xl font-black text-blue-400 block">{roiCalculations.clicks}</span>
-                <span className="text-[11px] text-slate-400 block">{t.estClicks}</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="text-xl sm:text-2xl font-black text-emerald-400 block">{roiCalculations.leads}</span>
-                <span className="text-[11px] text-slate-400 block">{t.estLeads}</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="text-xl sm:text-2xl font-black text-amber-400 block">${roiCalculations.cpl} CAD</span>
-                <span className="text-[11px] text-slate-400 block">{t.estCpl}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/40 p-2.5 rounded-xl">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Garantia de entrega: Se não atingir a projeção mínima, veiculamos bônus cortesia até a meta.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Billboard Lots Matrix (Catálogo de Lotes) */}
-      <div className="space-y-6">
-        <div className="text-center max-w-3xl mx-auto space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold border border-blue-200">
-            <Layers className="w-3.5 h-3.5 text-blue-600" />
-            <span>{t.catalogTitle}</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {t.catalogTitle}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            {t.catalogSubtitle}
-          </p>
-        </div>
-
-        {/* Filter Pills for Lots */}
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+        {/* Dedicated Navigation Tabs for each item in the Business Menu */}
+        <div className="relative z-10 pt-4 border-t border-white/10 flex flex-wrap items-center gap-2">
           {[
-            { id: 'all', label: lang === 'pt' ? 'Todos os Lotes (9)' : 'Tous les lots (9)' },
-            { id: 'banners', label: lang === 'pt' ? '📢 Banners & Display' : '📢 Bannières & Affichage' },
-            { id: 'sponsorship', label: lang === 'pt' ? '🏆 Patrocínio de Categoria & Ferramentas' : '🏆 Commandites de Section' },
-            { id: 'content', label: lang === 'pt' ? '✍️ Conteúdo, SEO & E-mail' : '✍️ Articles & Infolettre' },
-            { id: 'jobs', label: lang === 'pt' ? '💼 Vagas B2B & Combos' : '💼 Emplois & Combos' },
-          ].map((flt) => (
-            <button
-              key={flt.id}
-              type="button"
-              onClick={() => setCatalogFilter(flt.id as any)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                catalogFilter === flt.id
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {flt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Lots Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {lots
-            .filter((lot) => {
-              if (catalogFilter === 'all') return true;
-              if (catalogFilter === 'banners') return ['home-top', 'salary-results'].includes(lot.id);
-              if (catalogFilter === 'sponsorship') return ['tool-takeover', 'category-sponsor', 'pdf-cobranding'].includes(lot.id);
-              if (catalogFilter === 'content') return ['blog-sponsored', 'newsletter-dedicated'].includes(lot.id);
-              if (catalogFilter === 'jobs') return ['b2b-job-spot', 'combo-360'].includes(lot.id);
-              return true;
-            })
-            .map((lot) => {
-            const Icon = lot.icon;
-            const isSelected = selectedLotId === lot.id;
-
+            { id: 'catalog' as B2BTab, icon: Megaphone, label: lang === 'pt' ? 'Mídia Kit & Lotes 2026' : 'Kit Média & Lots' },
+            { id: 'sponsorship' as B2BTab, icon: Award, label: lang === 'pt' ? 'Patrocínio Exclusivo' : 'Commandite Exclusive' },
+            { id: 'jobs' as B2BTab, icon: Briefcase, label: lang === 'pt' ? 'Divulgação de Vagas & Combos 360°' : 'Offres d’Emploi 360°' },
+            { id: 'map' as B2BTab, icon: MapPin, label: lang === 'pt' ? 'Mapa Interativo de Espaços' : 'Plan Interactif des Espaces' },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
-              <div
-                key={lot.id}
-                className={`p-6 rounded-3xl transition-all border flex flex-col justify-between relative shadow-sm hover:shadow-md ${
-                  isSelected
-                    ? 'bg-blue-50/50 border-blue-600 ring-2 ring-blue-500/20'
-                    : 'bg-white border-slate-200/90 hover:border-slate-300'
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  window.scrollTo({ top: 120, behavior: 'smooth' });
+                }}
+                className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-md font-extrabold ring-2 ring-blue-400/30'
+                    : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
                 }`}
               >
-                <div>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                        isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      <Icon className="w-6 h-6" />
-                    </div>
-
-                    <span
-                      className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full border ${
-                        lot.badgeColor === 'emerald'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : lot.badgeColor === 'purple'
-                          ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : lot.badgeColor === 'amber'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}
-                    >
-                      {lot.badge}
-                    </span>
-                  </div>
-
-                  <h4 className="font-extrabold text-slate-900 text-base leading-snug">
-                    {lot.name}
-                  </h4>
-                  <span className="text-[11px] font-bold text-slate-500 block mb-2">
-                    {lot.category}
-                  </span>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                    {lot.description}
-                  </p>
-
-                  <div className="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-700 mb-4 border border-slate-100">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Formato:</span>
-                      <span className="font-semibold">{lot.format}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Impressões:</span>
-                      <span className="font-semibold text-emerald-700">{lot.impressionsEst}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">CTR Estimado:</span>
-                      <span className="font-bold text-blue-600">{lot.ctrEst}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 space-y-3">
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <span className="text-xs text-slate-500 block">Tabela Base:</span>
-                      <span className="text-xl font-black text-slate-900">${lot.monthlyPriceCad} CAD</span>
-                      <span className="text-[10px] text-slate-500"> {lot.id === 'blog-sponsored' ? '/ vitalício' : '/ mês'}</span>
-                    </div>
-
-                    {isSelected && (
-                      <span className="text-xs font-extrabold text-blue-600 flex items-center gap-1 bg-blue-100 px-2 py-0.5 rounded-lg">
-                        <Check className="w-3.5 h-3.5" />
-                        <span>{t.selectedLotBadge}</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedLotId(lot.id);
-                      if (lot.id === 'home-top') setPreviewZone('home-top');
-                      else if (lot.id === 'salary-results') setPreviewZone('salary-results');
-                      else if (lot.id === 'tool-takeover') setPreviewZone('tools-section');
-                      else if (lot.id === 'blog-sponsored') setPreviewZone('blog-article');
-                      else setPreviewZone('salary-results');
-
-                      const checkoutEl = document.getElementById('checkout-form');
-                      if (checkoutEl) checkoutEl.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
-                    }`}
-                  >
-                    <span>{isSelected ? t.selectedLotBadge : t.selectLotBtn}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* 5. Interactive Site Blueprint & Zone Mockup Preview */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-          <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-              <Eye className="w-3.5 h-3.5 text-blue-600" />
-              <span>{t.zonePreviewTitle}</span>
+      {/* 2. TAB 1: MÍDIA KIT & MATRIZ DE LOTES */}
+      {activeTab === 'catalog' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          {/* Audited Proof Metrics */}
+          <div className="space-y-4">
+            <div className="text-center max-w-2xl mx-auto space-y-1">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 block">
+                Métricas Reais Auditadas
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                Por que o PaieNet Converte 15x Mais que Banners Comuns?
+              </h2>
+              <p className="text-xs text-slate-500">
+                Nossos usuários não estão navegando passivamente. Eles estão calculando salários líquidos, avaliando contracheques e decidindo aportes fiscais.
+              </p>
             </div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900">
-              {t.zonePreviewTitle}
-            </h3>
-            <p className="text-xs text-slate-500">
-              {t.zonePreviewSubtitle}
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1 text-center">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 block">48.200+</span>
+                <span className="text-xs font-bold text-slate-500 block">Visitantes Únicos / Mês</span>
+                <span className="text-[10px] text-emerald-600 font-bold block pt-1 border-t border-slate-100">
+                  +18% Crescimento MoM
+                </span>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1 text-center">
+                <span className="text-2xl sm:text-3xl font-black text-blue-600 block">5m 42s</span>
+                <span className="text-xs font-bold text-slate-500 block">Tempo Médio na Página</span>
+                <span className="text-[10px] text-blue-600 font-bold block pt-1 border-t border-slate-100">
+                  Atenção 100% Focada
+                </span>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1 text-center">
+                <span className="text-2xl sm:text-3xl font-black text-emerald-600 block">4.6%</span>
+                <span className="text-xs font-bold text-slate-500 block">CTR Médio em Vitrines</span>
+                <span className="text-[10px] text-emerald-700 font-bold block pt-1 border-t border-slate-100">
+                  vs 0.3% em Mídia Display Comum
+                </span>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1 text-center">
+                <span className="text-2xl sm:text-3xl font-black text-indigo-600 block">$72.400 CAD</span>
+                <span className="text-xs font-bold text-slate-500 block">Renda Média Declarada</span>
+                <span className="text-[10px] text-indigo-600 font-bold block pt-1 border-t border-slate-100">
+                  Alta Bancarização
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ROI Simulator */}
+          <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                <span>Simulador de Projeção de Leads</span>
+              </div>
+              <h3 className="text-xl font-black text-white">Simule a Eficácia da sua Campanha</h3>
+              <p className="text-xs text-slate-300">
+                Calcule a estimativa de cliques e leads qualificados de acordo com o segmento da sua empresa.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              <div className="md:col-span-6 space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1.5">Segmento de Atuação</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'banking', label: 'Bancos / Fintech' },
+                      { id: 'insurance', label: 'Seguros & Benefícios' },
+                      { id: 'recruitment', label: 'RH & Vagas' },
+                      { id: 'immigration', label: 'Imigração' },
+                      { id: 'education', label: 'Idiomas & Cursos' },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSelectedSegment(s.id as any)}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                          selectedSegment === s.id
+                            ? 'bg-blue-600 border-blue-400 text-white'
+                            : 'bg-slate-800 border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-300 mb-1.5">
+                    <span>Investimento Mensal Pretendido:</span>
+                    <span className="text-emerald-400 text-sm font-black">${budgetSlider} CAD</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="250"
+                    max="2500"
+                    step="50"
+                    value={budgetSlider}
+                    onChange={(e) => setBudgetSlider(Number(e.target.value))}
+                    className="w-full accent-blue-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                    <span>$250 CAD (Piloto)</span>
+                    <span>$1.000 CAD (Aceleração)</span>
+                    <span>$2.500 CAD (Liderança de Categoria)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Simulation Result */}
+              <div className="md:col-span-6 bg-white/5 border border-white/10 rounded-2xl p-5 grid grid-cols-2 gap-3 text-center">
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                  <span className="text-xl font-black text-white block">{roiCalculations.impressions}</span>
+                  <span className="text-[11px] text-slate-400 block">Impressões Qualificadas</span>
+                </div>
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                  <span className="text-xl font-black text-blue-400 block">{roiCalculations.clicks}</span>
+                  <span className="text-[11px] text-slate-400 block">Cliques Diretos (CTR ~4.6%)</span>
+                </div>
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                  <span className="text-xl font-black text-emerald-400 block">{roiCalculations.leads}</span>
+                  <span className="text-[11px] text-slate-400 block">Leads Quentes Esperados</span>
+                </div>
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                  <span className="text-xl font-black text-amber-400 block">${roiCalculations.cpl} CAD</span>
+                  <span className="text-[11px] text-slate-400 block">Custo Médio por Lead (CPL)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Matrix of Lots */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-900">
+                Matriz de Lotes Comerciais Disponíveis
+              </h2>
+              <button
+                type="button"
+                onClick={() => setActiveTab('map')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Ver no Mapa Interativo</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {allPortalSpaces.slice(0, 6).map((space) => (
+                <div
+                  key={space.id}
+                  className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-4 shadow-xs hover:shadow-md transition-all"
+                >
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      {space.statusLabel}
+                    </span>
+                    <h3 className="text-base font-extrabold text-slate-900 leading-snug">
+                      {space.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {space.description}
+                    </p>
+                    <div className="pt-2 text-[11px] text-slate-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Dimensões:</span>
+                        <span className="font-semibold">{space.dimensions}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Audiência:</span>
+                        <span className="font-semibold text-emerald-700">{space.monthlyViews}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">CTR Médio:</span>
+                        <span className="font-bold text-blue-600">{space.avgCtr}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Tabela:</span>
+                      <span className="text-lg font-black text-slate-900">${space.monthlyPriceCad} CAD</span>
+                      <span className="text-[10px] text-slate-500">/mês</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLotId(space.id);
+                        setSelectedMapSpaceId(space.id);
+                        const form = document.getElementById('b2b-inquiry-form');
+                        if (form) form.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Reservar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. TAB 2: COMMANDITE EXCLUSIVE DE CATÉGORIE */}
+      {activeTab === 'sponsorship' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-600 block">
+              Domine seu Setor de Atuação
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+              Commandite Exclusive de Catégorie & Ferramentas
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Em vez de disputar espaço com concorrentes, torne-se o patrocinador exclusivo da categoria no PaieNet. Sua marca com chancela oficial e sem anúncios de rivais na mesma área.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { id: 'home-top', label: '1. Topo Header' },
-              { id: 'salary-results', label: '2. Pós-Salário' },
-              { id: 'tools-section', label: '3. Ferramentas' },
-              { id: 'blog-article', label: '4. Artigos Blog' },
-              { id: 'footer-wide', label: '5. Rodapé' },
-            ].map((z) => (
-              <button
-                key={z.id}
-                type="button"
-                onClick={() => setPreviewZone(z.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
-                  previewZone === z.id
-                    ? 'bg-blue-600 border-blue-600 text-white'
-                    : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                }`}
+              {
+                title: '🏆 Categoria Bancária & Folha de Pagamento',
+                sponsor: 'Ideal para Desjardins, BMO, RBC, National Bank',
+                badge: '1 Vaga Restante',
+                badgeColor: 'purple',
+                price: '$650 CAD/mês',
+                features: [
+                  'Chancela exclusiva no cabeçalho do Contracheque Líquido',
+                  'Exclusividade no Simulador de Aumento e Match REER/CELIAPP',
+                  'Bloqueio completo de anúncios de outros bancos no portal',
+                  'Disparo mensal de e-mail dedicado para a base de trabalhadores',
+                ],
+              },
+              {
+                title: '🚀 Categoria Recrutamento & Recursos Humanos',
+                sponsor: 'Ideal para Randstad, Adecco, Agências de TI & Indústria',
+                badge: 'Disponível',
+                badgeColor: 'emerald',
+                price: '$580 CAD/mês',
+                features: [
+                  'Presença no Construtor de Currículos ATS com botão de envio direto',
+                  'Chancela no Simulador de Entrevistas STAR e Testes Técnicos',
+                  'Destaque no topo do mural de vagas B2B com link corporativo',
+                  'Publicação de 3 artigos patrocinados por trimestre inclusos',
+                ],
+              },
+              {
+                title: '🍁 Categoria Imigração & Relocação no Canadá',
+                sponsor: 'Ideal para Escritórios de Imigração, Escolas de Francês, Realocação',
+                badge: 'Alta Procura',
+                badgeColor: 'blue',
+                price: '$520 CAD/mês',
+                features: [
+                  'Patrocínio exclusivo do Comparador Salarial Interprovincial',
+                  'Banner nos guias de custo de vida e sobrevivência fiscal',
+                  'Associação de marca nos downloads de checklists e modelos de CV',
+                  'Relatório mensal de leads qualificados gerados',
+                ],
+              },
+              {
+                title: '💰 Categoria Investimentos & Câmbio Internacional',
+                sponsor: 'Ideal para Wise, Wealthsimple, Questrade, Corretoras',
+                badge: 'Disponível',
+                badgeColor: 'amber',
+                price: '$490 CAD/mês',
+                features: [
+                  'Recomendação preferencial no Conversor de Períodos de Salário',
+                  'Presença destacada no cálculo de restituição fiscal de fim de ano',
+                  'Link direto rastreado sem taxas de intermediação',
+                  'Artigo permanente indexado no Google sobre remessas e investimentos',
+                ],
+              },
+            ].map((pack, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
               >
-                {z.label}
-              </button>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                      {pack.badge}
+                    </span>
+                    <span className="text-xl font-black text-slate-900">{pack.price}</span>
+                  </div>
+
+                  <h3 className="text-lg font-black text-slate-900">{pack.title}</h3>
+                  <p className="text-xs font-semibold text-slate-500">{pack.sponsor}</p>
+
+                  <ul className="space-y-2 pt-2 border-t border-slate-100">
+                    {pack.features.map((feat, fIdx) => (
+                      <li key={fIdx} className="text-xs text-slate-700 flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLotId('category-sponsor');
+                    setFormData((prev) => ({
+                      ...prev,
+                      message: `Interesse no Patrocínio Exclusivo: ${pack.title}`,
+                    }));
+                    const form = document.getElementById('b2b-inquiry-form');
+                    if (form) form.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>Solicitar Bloqueio de Exclusividade</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Visual Mockup Container */}
-        <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-white space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-400 pb-3 border-b border-slate-800">
-            <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Visualização ao Vivo da Página (Simulador de Posicionamento)</span>
+      {/* 4. TAB 3: DIVULGAÇÃO DE VAGAS & COMBOS 360° */}
+      {activeTab === 'jobs' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 block">
+              Recrutamento Eficiente no Québec
             </span>
-            <span className="font-mono text-[11px] text-blue-400">URL: paienet.qc.ca/#{previewZone}</span>
-          </div>
-
-          {/* Contextual Render Preview */}
-          <div className="p-4 sm:p-6 bg-slate-900 rounded-xl border border-dashed border-slate-700 space-y-4">
-            {previewZone === 'home-top' && (
-              <div className="space-y-3">
-                <div className="p-3 bg-blue-600/10 border border-blue-500/30 rounded-xl text-center">
-                  <span className="text-xs font-extrabold text-blue-400 uppercase tracking-widest block mb-1">
-                    🎯 SUA MARCA AQUI (Leaderboard Topo 728×90)
-                  </span>
-                  <p className="text-sm font-bold text-white">
-                    Desjardins / Empresa Parceira: Abra sua conta salário no Québec com vantagens exclusivas
-                  </p>
-                </div>
-                <div className="h-10 bg-slate-800/60 rounded-lg flex items-center justify-center text-xs text-slate-500">
-                  [Cabeçalho da Calculadora & Entradas Salariais Logo Abaixo]
-                </div>
-              </div>
-            )}
-
-            {previewZone === 'salary-results' && (
-              <div className="space-y-3">
-                <div className="h-14 bg-slate-800/80 rounded-lg flex items-center justify-center text-xs text-slate-400 font-mono">
-                  [Tabela de Salário Líquido: $2.140,50 CAD | Retenções: RRQ, RQAP, Imposto Federal/QC]
-                </div>
-                <div className="p-4 bg-emerald-950/40 border-2 border-emerald-500/40 rounded-xl text-center space-y-1">
-                  <span className="text-[11px] font-extrabold text-emerald-400 uppercase tracking-widest block">
-                    💰 ZONA PRIME PÓS-CONTRACHEQUE (Maior CTR do Portal)
-                  </span>
-                  <p className="text-sm font-bold text-white">
-                    Poupe até $1.856 em deduções no seu imposto: Simule seu plano REER institucional
-                  </p>
-                  <span className="inline-block px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold mt-2">
-                    Botão de Ação / Link Rastreável
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {previewZone === 'tools-section' && (
-              <div className="space-y-3">
-                <div className="p-3.5 bg-purple-950/40 border border-purple-500/30 rounded-xl text-center">
-                  <span className="text-[11px] font-extrabold text-purple-400 uppercase tracking-widest block">
-                    🚀 PATROCÍNIO OFICIAL DE MÓDULO & FERRAMENTA
-                  </span>
-                  <p className="text-sm font-bold text-white">
-                    &ldquo;Simulador de Entrevistas STAR oferecido com exclusividade pela Agência Talent Québec&rdquo;
-                  </p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="h-12 bg-slate-800/50 rounded-lg"></div>
-                  <div className="h-12 bg-slate-800/50 rounded-lg"></div>
-                  <div className="h-12 bg-slate-800/50 rounded-lg"></div>
-                </div>
-              </div>
-            )}
-
-            {previewZone === 'blog-article' && (
-              <div className="space-y-3">
-                <div className="h-6 bg-slate-800/80 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-800/50 rounded w-full"></div>
-                <div className="h-4 bg-slate-800/50 rounded w-5/6"></div>
-                <div className="p-3.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-center">
-                  <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest block">
-                    📚 ARTIGO PATROCINADO & LINK DO-FOLLOW PERMANENTE
-                  </span>
-                  <p className="text-sm font-bold text-white">
-                    Conteúdo editorial de alta autoridade indexado no Google falando diretamente com o público da sua marca.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {previewZone === 'footer-wide' && (
-              <div className="space-y-3">
-                <div className="h-8 bg-slate-800/60 rounded"></div>
-                <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-center">
-                  <span className="text-[11px] font-extrabold text-blue-400 uppercase tracking-widest block">
-                    🤝 VITRINE INSTITUCIONAL DE RODAPÉ
-                  </span>
-                  <p className="text-xs font-bold text-white">
-                    Presença em 100% das páginas do portal, fortalecendo a confiança dos usuários.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 6. Checkout & Lot Reservation Form (Área de Vendas) */}
-      <div id="checkout-form" className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-6">
-        {submittedInquiry ? (
-          <div className="p-6 sm:p-8 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-lg">
-              <Check className="w-8 h-8" />
-            </div>
-            <h3 className="text-2xl font-black text-slate-900">
-              {t.successTitle}
-            </h3>
-            <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-              {t.successMsg}
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+              Divulgação de Vagas & Combos 360° de Atração
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Divulgue suas oportunidades de emprego diretamente para quem está ativamente calculando ofertas salariais e gerando currículos formatados no padrão canadense.
             </p>
+          </div>
 
-            <div className="p-4 bg-white rounded-xl max-w-md mx-auto border border-emerald-100 text-left space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">{t.protocol}:</span>
-                <span className="font-mono font-bold text-slate-900">{submittedInquiry.id}</span>
+          {/* Job Packages */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 flex flex-col justify-between shadow-xs">
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-slate-500 block">Vaga Individual</span>
+                <h3 className="text-xl font-black text-slate-900">Post de Vaga Simples</h3>
+                <span className="text-2xl font-black text-slate-900 block">$150 CAD</span>
+                <p className="text-xs text-slate-600">
+                  Publicação da vaga no mural de oportunidades por 15 dias com link direto para seu formulário.
+                </p>
+                <ul className="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" />
+                    <span>Duração de 15 dias</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" />
+                    <span>Link rastreado para seu ATS</span>
+                  </li>
+                </ul>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Lote Reservado:</span>
-                <span className="font-bold text-slate-900">{submittedInquiry.slotName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">{t.summaryVal}:</span>
-                <span className="font-black text-emerald-600 text-sm">${submittedInquiry.priceCad.toFixed(2)} CAD</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Empresa:</span>
-                <span className="font-semibold text-slate-800">{submittedInquiry.companyName}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
-              <a
-                href={`https://wa.me/15148904421?text=Olá! Acabei de solicitar a reserva da proposta ${submittedInquiry.id} para a empresa ${encodeURIComponent(submittedInquiry.companyName)} no PaieNet.`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-3 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-transform active:scale-95 cursor-pointer"
-              >
-                <span>{t.btnWhatsapp}</span>
-                <ExternalLink className="w-4 h-4" />
-              </a>
 
               <button
                 type="button"
-                onClick={() => setSubmittedInquiry(null)}
-                className="py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                onClick={() => {
+                  setSelectedLotId('b2b-job-spot');
+                  const form = document.getElementById('b2b-inquiry-form');
+                  if (form) form.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                {t.btnNew}
+                Publicar Vaga
+              </button>
+            </div>
+
+            <div className="bg-emerald-50/60 rounded-3xl border-2 border-emerald-500/80 p-6 space-y-4 flex flex-col justify-between shadow-sm relative">
+              <span className="absolute -top-3 right-6 bg-emerald-600 text-white font-extrabold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider">
+                Mais Vendido
+              </span>
+
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-emerald-800 block">Combo Recomendado</span>
+                <h3 className="text-xl font-black text-slate-900">Combo 360° Recrutamento</h3>
+                <span className="text-2xl font-black text-emerald-700 block">$450 CAD</span>
+                <p className="text-xs text-slate-700">
+                  Destaque no topo por 60 dias + menção em e-mail para 12.000 cadastrados + presença no Construtor de CV.
+                </p>
+                <ul className="space-y-1.5 text-xs text-slate-700 pt-2 border-t border-emerald-200/60">
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Destaque por 60 dias no mural</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Inclusão na Newsletter semanal</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>Sugestão ao finalizar currículo ATS</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedLotId('combo-360');
+                  const form = document.getElementById('b2b-inquiry-form');
+                  if (form) form.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer shadow-xs"
+              >
+                Contratar Combo 360°
+              </button>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 flex flex-col justify-between shadow-xs">
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-slate-500 block">Grandes Contratantes</span>
+                <h3 className="text-xl font-black text-slate-900">Passaporte Anual Ilimitado</h3>
+                <span className="text-2xl font-black text-slate-900 block">$1.200 CAD/ano</span>
+                <p className="text-xs text-slate-600">
+                  Vagas ilimitadas durante 12 meses para indústrias, empresas de TI e redes de hospitais.
+                </p>
+                <ul className="space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" />
+                    <span>Vagas ativas ilimitadas</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" />
+                    <span>Página corporativa dedicada</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedLotId('combo-unlimited');
+                  const form = document.getElementById('b2b-inquiry-form');
+                  if (form) form.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Falar com Consultor
               </button>
             </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div>
-                <span className="text-xs font-extrabold text-blue-600 uppercase tracking-wider block mb-1">
-                  Reserva & Contratação B2B
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                  {t.checkoutTitle}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {t.checkoutSubtitle}
-                </p>
-              </div>
 
-              {/* Duration selector */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
-                {[
-                  { id: 'monthly', label: '1 Mês' },
-                  { id: 'quarterly', label: '3 Meses (-15%)' },
-                  { id: 'biannual', label: '6 Meses (-25%)' },
-                  { id: 'one_time', label: 'Avulso' },
-                ].map((dur) => (
-                  <button
-                    key={dur.id}
-                    type="button"
-                    onClick={() => setSelectedDuration(dur.id as any)}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedDuration === dur.id
-                        ? 'bg-white text-blue-600 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+          {/* Live Partner Jobs Feed from adminStore */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-4">
+            <h3 className="text-base font-extrabold text-slate-900">
+              Vagas Corporativas em Exibição no Momento
+            </h3>
+            <div className="space-y-3">
+              {liveJobPostings.map((job) => (
+                <div
+                  key={job.id}
+                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900 text-sm">{job.title}</span>
+                      {job.featured && (
+                        <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                          Destaque 360°
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      <span className="font-semibold text-slate-700">{job.companyName}</span>
+                      <span>·</span>
+                      <span>{job.location}</span>
+                      <span>·</span>
+                      <span className="font-mono text-emerald-700 font-bold">{job.salaryRange}</span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={job.applicationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors"
                   >
-                    {dur.label}
-                  </button>
-                ))}
-              </div>
+                    <span>Candidatar</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              ))}
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Selected Lot Header Confirmation */}
-            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
-                  Lote Selecionado:
+      {/* 5. TAB 4: MAPA INTERATIVO DE ESPAÇOS PUBLICITÁRIOS (COM MENU COMPLETO DINÂMICO) */}
+      {activeTab === 'map' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+              <MapPin className="w-3.5 h-3.5 text-blue-600" />
+              <span>Planta Baixa & Inventário Completo</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+              Mapa Interativo de Espaços Publicitários
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Explore o menu com todos os espaços e vitrines disponíveis no portal. Selecione um espaço para inspecionar seu posicionamento exato, métricas de tráfego e simulação em tempo real.
+            </p>
+          </div>
+
+          {/* Interactive Split View: Space Menu on Left + Live Page Simulation on Right */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Dynamic Menu with all spaces */}
+            <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200 p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Menu de Espaços Disponíveis ({allPortalSpaces.length})
                 </span>
-                <span className="font-black text-slate-900 text-base">{currentLot.name}</span>
-                <span className="text-xs text-slate-600 block mt-0.5">{currentLot.format} • {currentLot.impressionsEst}</span>
+                <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                  Atualizado em Tempo Real
+                </span>
               </div>
 
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-500 block uppercase">Total Previsto:</span>
-                <span className="text-2xl font-black text-blue-600">${calculatedPriceCad.toFixed(2)} CAD</span>
+              <div className="space-y-2 max-h-[620px] overflow-y-auto pr-1">
+                {allPortalSpaces.map((space) => {
+                  const isSelected = selectedMapSpaceId === space.id;
+                  return (
+                    <button
+                      key={space.id}
+                      type="button"
+                      onClick={() => setSelectedMapSpaceId(space.id)}
+                      className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                        isSelected
+                          ? 'bg-blue-50/70 border-blue-500 ring-2 ring-blue-500/20 shadow-xs'
+                          : 'bg-slate-50/60 hover:bg-slate-100/70 border-slate-200/80'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-extrabold text-xs text-slate-900 leading-snug">
+                          {space.name}
+                        </span>
+                        <span className="font-mono text-xs font-black text-blue-700 shrink-0">
+                          ${space.monthlyPriceCad}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{space.page}</span>
+                        <span className="font-semibold text-emerald-700">{space.monthlyViews}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/50">
+                        <span>{space.dimensions}</span>
+                        <span className="font-bold text-blue-600">CTR {space.avgCtr}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Fields Grid */}
+            {/* Right Column: Live Contextual Page Simulation & Specs */}
+            <div className="lg:col-span-7 bg-slate-950 text-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl border border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="font-bold text-white">Visualização do Posicionamento ao Vivo</span>
+                </div>
+                <span className="font-mono text-[11px] text-blue-400">{currentMapSpace.urlPath}</span>
+              </div>
+
+              {/* Space Detailed Card */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  {currentMapSpace.statusLabel}
+                </span>
+                <h3 className="text-xl font-black text-white">{currentMapSpace.name}</h3>
+                <p className="text-xs text-slate-400">{currentMapSpace.description}</p>
+              </div>
+
+              {/* Mockup Container */}
+              <div className="p-4 sm:p-6 bg-slate-900 rounded-2xl border border-dashed border-slate-700 space-y-4">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border-2 border-blue-400/80 text-center space-y-2 shadow-inner">
+                  <span className="text-[11px] font-extrabold text-blue-300 uppercase tracking-widest block">
+                    🎯 SUA MARCA AQUI · {currentMapSpace.dimensions}
+                  </span>
+                  <p className="text-sm font-bold text-white">
+                    {currentMapSpace.previewSnippet}
+                  </p>
+                  <span className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold mt-1 shadow-xs">
+                    Link Rastreado / CTA Direto
+                  </span>
+                </div>
+
+                <div className="h-10 bg-slate-800/60 rounded-xl flex items-center justify-center text-xs text-slate-500 font-mono">
+                  [Conteúdo Oficial do Portal PaieNet.qc ao Redor]
+                </div>
+              </div>
+
+              {/* Technical Specifications Matrix */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[10px]">Tabela Mensal</span>
+                  <span className="text-base font-black text-white">${currentMapSpace.monthlyPriceCad} CAD</span>
+                </div>
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[10px]">Impressões/Mês</span>
+                  <span className="text-base font-black text-emerald-400">{currentMapSpace.monthlyViews}</span>
+                </div>
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[10px]">CTR Médio</span>
+                  <span className="text-base font-black text-blue-400">{currentMapSpace.avgCtr}</span>
+                </div>
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[10px]">Garantia de Entrega</span>
+                  <span className="text-base font-black text-amber-400">100%</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-slate-400">
+                  <span>Recomendado para: </span>
+                  <strong className="text-white">{currentMapSpace.bestFor}</strong>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLotId(currentMapSpace.id);
+                    setFormData((prev) => ({
+                      ...prev,
+                      message: `Interesse no Espaço: ${currentMapSpace.name} (${currentMapSpace.dimensions})`,
+                    }));
+                    const form = document.getElementById('b2b-inquiry-form');
+                    if (form) form.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <span>Reservar este Espaço</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Formal Reservation Checkout / Inquiry Form (Universal across all tabs) */}
+      <div id="b2b-inquiry-form" className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-sm space-y-6">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 block">
+            Reserva de Espaço & Proposta Comercial
+          </span>
+          <h2 className="text-2xl font-black text-slate-900">
+            Garanta a Exclusividade da sua Marca no PaieNet
+          </h2>
+          <p className="text-xs text-slate-500">
+            Preencha os dados da sua organização para receber a fatura proforma formal e travar a veiculação do lote escolhido.
+          </p>
+        </div>
+
+        {!submittedInquiry ? (
+          <form onSubmit={handleSubmitInquiry} className="max-w-3xl mx-auto space-y-5">
+            {/* Selected Lot Display */}
+            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 block">
+                  Espaço Comercial Selecionado
+                </span>
+                <span className="text-sm font-black text-slate-900">
+                  {allPortalSpaces.find((s) => s.id === selectedLotId)?.name || 'Lote Padrão Selecionado'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-600">Duração:</span>
+                <select
+                  value={selectedDuration}
+                  onChange={(e) => setSelectedDuration(e.target.value as any)}
+                  className="bg-white px-3 py-1.5 rounded-lg border border-blue-300 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  <option value="monthly">1 Mês (Teste)</option>
+                  <option value="quarterly">3 Meses (Trimestral -10%)</option>
+                  <option value="biannual">6 Meses (Semestral -15%)</option>
+                  <option value="one_time">Anual / Vitalício</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Input fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {t.companyLabel} *
+                  Nome da Empresa / Organização *
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="Ex: Desjardins, CGI, Agência Talent..."
                   value={formData.companyName}
                   onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  placeholder="Ex: Desjardins Assurances Inc."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {t.contactLabel} *
+                  Nome do Responsável de Marketing / RH *
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="Ex: Sophie Tremblay"
                   value={formData.contactName}
                   onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  placeholder="Ex: Sophie Larouche"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {t.emailLabel} *
+                  E-mail Corporativo *
                 </label>
                 <input
                   type="email"
                   required
+                  placeholder="contato@empresa.ca"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Ex: contact@votre-entreprise.ca"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {t.phoneLabel}
+                  Telefone / WhatsApp Comercial *
                 </label>
                 <input
                   type="tel"
+                  required
+                  placeholder="+1 (514) 000-0000"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Ex: +1 (514) 890-0000"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {t.websiteLabel}
+                  Website da Empresa ou Perfil LinkedIn
                 </label>
                 <input
                   type="url"
+                  placeholder="https://suaempresa.ca"
                   value={formData.websiteUrl}
                   onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
-                  placeholder="https://votre-entreprise.ca"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  {t.msgLabel}
+                  Briefing ou Objetivos da Campanha (Opcional)
                 </label>
                 <textarea
                   rows={3}
+                  placeholder="Ex: Queremos divulgar vagas de TI em Montreal ou promover nosso plano de previdência REER coletivo..."
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder={t.msgPlaceholder}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <span className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Sem cobrança imediata no cartão. Enviamos fatura proforma após aprovação do criativo.</span>
-              </span>
-
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+                className="w-full py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
               >
-                <span>{isSubmitting ? 'Gerando Proposta...' : t.btnSubmit}</span>
-                <ArrowRight className="w-4 h-4" />
+                {isSubmitting ? (
+                  <span>Registrando Proposta Comercial...</span>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Enviar Solicitação de Reserva de Espaço</span>
+                  </>
+                )}
               </button>
             </div>
+
+            <p className="text-[11px] text-slate-400 text-center">
+              🔒 Compromisso Comercial: Nossa diretoria responderá em até 24 horas úteis com a proposta e o contrato proforma.
+            </p>
           </form>
+        ) : (
+          <div className="max-w-md mx-auto text-center py-6 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-slate-900">
+                Proposta Registrada com Sucesso!
+              </h3>
+              <p className="text-xs text-slate-600">
+                O protocolo <strong>{submittedInquiry.id}</strong> foi registrado no nosso CRM e uma confirmação foi enviada para <strong>{submittedInquiry.email}</strong>.
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-700 font-medium">
+              Espaço reservado: <strong>{submittedInquiry.slotName}</strong>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSubmittedInquiry(null)}
+              className="py-2.5 px-6 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Fazer Nova Solicitação
+            </button>
+          </div>
         )}
       </div>
     </div>
