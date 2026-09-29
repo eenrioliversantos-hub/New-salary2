@@ -838,17 +838,6 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
           )}
         </AnimatePresence>
 
-        {/* Mapped Toolbox Sponsor Banner */}
-        <AdBanner
-          section="tools-section"
-          format="bottom-wide"
-          lang={lang}
-          onNavigateToMediaKit={() => {
-            handleSelectTool('media-kit');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-
         {/* 3. iLovePDF-Style Toolbox Grid (All Tools Showcase) */}
         <div id="toolbox-section" className="pt-8 border-t border-slate-200/80">
           <ToolboxGrid

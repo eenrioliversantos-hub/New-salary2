@@ -69,6 +69,19 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   }, []);
 
   const houseAdsSponsor = useMemo(() => {
+    if (section === 'salary-results') {
+      return {
+        sponsorName: 'PaieNet Insights & Recursos',
+        headline: lang === 'pt' ? 'Entenda seu líquido e tome decisões melhores' : 'Comprenez votre net et prenez de meilleures décisions',
+        tagline: lang === 'pt' ? 'Guia prático, planilhas e ferramentas para transformar seu resultado em um próximo passo.' : 'Guides, feuilles de calcul et outils pour transformer votre résultat en prochaine étape.',
+        linkUrl: '#monetization',
+        badgeText: lang === 'pt' ? 'Recomendado para você' : 'Recommandé pour vous',
+        ctaText: lang === 'pt' ? 'Ver recursos relacionados' : 'Voir les ressources liées',
+        themeGradient: 'emerald',
+        iconType: 'trending',
+      };
+    }
+
     if (['resume-builder', 'interview-simulator', 'tech-tests', 'pro-plans'].includes(activeTool)) {
       return {
         sponsorName: 'Pass PaieNet Carrière Pro',
@@ -182,7 +195,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   }, [currentFormat, section]);
 
   // Live inventory is intentionally limited to high-intent placements. Product and affiliate offers live in the dedicated hub; B2B inventory remains in the business area.
-  const isCuratedLivePlacement = ['home-top', 'salary-results', 'footer-wide'].includes(section || '') || ['media-kit', 'partners'].includes(activeTool);
+  const isCuratedLivePlacement = ['home-top', 'salary-results', 'footer-wide'].includes(section || '') || activeTool === 'partners';
   if (!isPreviewMode && !isCuratedLivePlacement) return null;
 
   // If paused and not preview mode, completely hide
