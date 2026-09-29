@@ -42,6 +42,7 @@ export type ToolId =
   | 'tech-tests'
   | 'blog'
   | 'media-kit'
+  | 'monetization'
   | 'sitemap'
   | 'admin'
   | 'ebook-store'
@@ -175,6 +176,14 @@ export const ToolboxGrid: React.FC<ToolboxGridProps> = ({
       icon: Building2,
       color: 'emerald',
       badge: 'B2B 2026',
+    },
+    {
+      id: 'monetization' as ToolId,
+      name: lang === 'pt' ? 'Soluções & Recomendações' : lang === 'en' ? 'Solutions & Recommendations' : 'Solutions & Recommandations',
+      desc: lang === 'pt' ? 'Produtos PaieNet e recomendações de afiliados em uma área organizada e transparente' : lang === 'en' ? 'PaieNet products and affiliate recommendations in one transparent hub' : 'Produits PaieNet et recommandations affiliées dans un hub transparent',
+      icon: Sparkles,
+      color: 'blue',
+      badge: 'Curadoria',
     },
     {
       id: 'resume-builder' as ToolId,

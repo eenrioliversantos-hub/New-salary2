@@ -96,9 +96,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         sponsorName: 'Guia Definitivo do Salário no Québec 2026',
         headline: lang === 'pt' ? 'Evite Erros Fiscais e Normativos que Custam Caro' : 'Évitez les erreurs sur votre paie québécoise',
         tagline: lang === 'pt' ? '140 páginas sobre impostos Revenu Québec/ARC, CNESST, bônus de Excel e modelos de CV.' : '140 pages pour décrypter vos retenues, normes CNESST et bonus Excel.',
-        linkUrl: '#ebook-store',
+        linkUrl: '#monetization',
         badgeText: 'Manual Bestseller',
-        ctaText: lang === 'pt' ? 'Comprar E-book $9.99' : 'Acheter l’E-book 9,99 $',
+        ctaText: lang === 'pt' ? 'Ver soluções recomendadas' : 'Voir les solutions recommandées',
         themeGradient: 'amber',
         iconType: 'star',
       };
@@ -180,6 +180,10 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         };
     }
   }, [currentFormat, section]);
+
+  // Live inventory is intentionally limited to high-intent placements. Product and affiliate offers live in the dedicated hub; B2B inventory remains in the business area.
+  const isCuratedLivePlacement = ['home-top', 'salary-results', 'footer-wide'].includes(section || '') || ['media-kit', 'partners'].includes(activeTool);
+  if (!isPreviewMode && !isCuratedLivePlacement) return null;
 
   // If paused and not preview mode, completely hide
   if (!isPreviewMode && (!adSlot || adSlot.status === 'paused')) {

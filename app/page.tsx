@@ -38,6 +38,7 @@ import { PartnersPage } from '@/components/PartnersPage';
 import { NewsletterBox } from '@/components/NewsletterBox';
 import { AdminPanel } from '@/components/AdminPanel';
 import { AdBanner } from '@/components/AdBanner';
+import { MonetizationHubPage } from '@/components/MonetizationHubPage';
 import { InterprovincialSalaryComparator } from '@/components/InterprovincialSalaryComparator';
 import { ResourceHubSection } from '@/components/ResourceHubSection';
 import { GuidesAndResources } from '@/components/GuidesAndResources';
@@ -232,6 +233,7 @@ export default function HomePage() {
           'tech-tests',
           'blog',
           'media-kit',
+          'monetization',
           'sitemap',
           'admin',
           'ebook-store',
@@ -734,7 +736,20 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
             </motion.div>
           )}
 
-          {/* TOOL 13: SITEMAP & INSTITUTIONAL COMPLIANCE PAGES */}
+          {/* TOOL 13: MONETIZATION HUB — dedicated destination for owned products and affiliate recommendations */}
+          {activeTool === 'monetization' && (
+            <motion.div
+              key="monetization-workspace"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <MonetizationHubPage lang={lang} onSelectTool={handleSelectTool} />
+            </motion.div>
+          )}
+
+          {/* TOOL 14: SITEMAP & INSTITUTIONAL COMPLIANCE PAGES */}
           {activeTool === 'sitemap' && (
             <motion.div
               key="sitemap-workspace"
