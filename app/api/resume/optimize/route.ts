@@ -1,7 +1,14 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+function getAIClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+}
 
 function fallbackOptimize(resumeData: any, companyName: string, jobTitle: string, targetLanguage: string) {
   const isEn = targetLanguage === 'en';
@@ -168,9 +175,10 @@ Réponds STRICTEMENT avec un objet JSON valide (sans backticks markdown, sans te
 
     let parsedData = null;
     try {
-      if (process.env.GEMINI_API_KEY) {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+      const aiClient = getAIClient();
+      if (aiClient) {
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-2.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',

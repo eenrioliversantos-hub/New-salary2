@@ -1244,6 +1244,23 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Direct Dedicated Tab: Blog & Análises */}
+              <button
+                type="button"
+                onClick={() => handleNavClick('blog')}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-pointer ${
+                  activeTool === 'blog'
+                    ? 'text-blue-700 bg-blue-50/90 font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                <span>{lang === 'pt' ? 'Blog' : lang === 'en' ? 'Blog' : 'Blogue'}</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-700">
+                  {lang === 'pt' ? 'Artigos' : 'Articles'}
+                </span>
+              </button>
             </nav>
           </div>
 
