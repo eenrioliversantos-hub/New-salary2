@@ -25,6 +25,9 @@ import {
   Layers,
   Compass,
   Crown,
+  Share2,
+  Link,
+  MessageCircle,
 } from 'lucide-react';
 
 export type Article = BlogArticleData;
@@ -46,6 +49,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   const [selectedAudience, setSelectedAudience] = useState<string>('all');
   const [activeArticleId, setActiveArticleId] = useState<string | null>(initialArticleId || null);
   const [prevInitialId, setPrevInitialId] = useState<string | null | undefined>(initialArticleId);
+  const [comment, setComment] = useState('');
+  const [commentSent, setCommentSent] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const articles = useSyncExternalStore(
     (cb) => adminStore.subscribe(cb),
@@ -94,6 +100,17 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   }, [articles, selectedCategory, selectedAudience]);
 
   const activeArticle = articles.find((a) => a.id === activeArticleId);
+
+  const handleShareArticle = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: activeArticle?.title[lang] || activeArticle?.title.pt, url: shareUrl });
+      return;
+    }
+    await navigator.clipboard.writeText(shareUrl);
+    setShareCopied(true);
+    window.setTimeout(() => setShareCopied(false), 2200);
+  };
 
   // Related articles resolved dynamically from relatedArticleIds or fallback to same category
   const relatedArticles = useMemo(() => {
@@ -197,7 +214,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           </div>
 
           {/* Article Header & Strategic Metadata Strip */}
-          <div className="bg-white p-6 sm:p-10 rounded-[2rem] border border-slate-200 shadow-sm space-y-7">
+          <div className="overflow-hidden bg-white rounded-[2rem] border border-slate-200 shadow-sm">
+            <div className="h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-950" aria-hidden="true" />
+            <div className="p-6 sm:p-10 space-y-7">
             {/* Category and Date row */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
@@ -271,6 +290,17 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </figure>
             )}
 
+            <div className="flex flex-wrap items-center justify-between gap-3 border-y border-slate-100 py-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                <MessageCircle className="w-4 h-4 text-blue-600" />
+                <span>{lang === 'pt' ? 'Leitura comentada pela comunidade' : 'Community discussion'}</span>
+              </div>
+              <button type="button" onClick={handleShareArticle} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-extrabold text-white hover:bg-blue-700 transition-colors cursor-pointer">
+                {shareCopied ? <Link className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+                <span>{shareCopied ? (lang === 'pt' ? 'Link copiado' : 'Link copied') : (lang === 'pt' ? 'Compartilhar artigo' : 'Share article')}</span>
+              </button>
+            </div>
+
             {/* Article Content Paragraphs */}
             <div className="prose prose-slate max-w-3xl text-sm sm:text-base text-slate-700 leading-8 space-y-5 pt-2">
               {(activeArticle.content[lang] || activeArticle.content.pt || []).map((paragraph, idx) => (
@@ -279,6 +309,22 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                 </p>
               ))}
             </div>
+            </div>
+
+            <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5 space-y-3" aria-label={lang === 'pt' ? 'Comentários do artigo' : 'Article comments'}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">{lang === 'pt' ? 'Comente este artigo' : 'Join the discussion'}</h3>
+                  <p className="text-xs text-slate-500 mt-1">{lang === 'pt' ? 'Compartilhe uma dúvida ou experiência relacionada ao tema.' : 'Share a question or experience related to this topic.'}</p>
+                </div>
+                <MessageCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <textarea value={comment} onChange={(event) => { setComment(event.target.value); setCommentSent(false); }} rows={3} maxLength={500} placeholder={lang === 'pt' ? 'Escreva seu comentário...' : 'Write your comment...'} className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] text-slate-400">{comment.length}/500</span>
+                <button type="button" disabled={!comment.trim()} onClick={() => { setCommentSent(true); setComment(''); }} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">{commentSent ? (lang === 'pt' ? 'Comentário enviado' : 'Comment sent') : (lang === 'pt' ? 'Publicar comentário' : 'Post comment')}</button>
+              </div>
+            </section>
 
             {/* ============================================================== */}
             {/* MONETIZATION ZONE 2: CONTEXTUAL CALL-TO-ACTION (CTA TOOL)      */}
