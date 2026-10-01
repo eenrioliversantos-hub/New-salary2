@@ -7,6 +7,7 @@ import { NewsletterBox } from '@/components/NewsletterBox';
 import { adminStore, BlogArticleData } from '@/lib/admin-store';
 import { AdBanner } from '@/components/AdBanner';
 import { normalizeUrl } from '@/lib/utils';
+import { BlogEngagement } from '@/components/BlogEngagement';
 import {
   BookOpen,
   Sparkles,
@@ -971,6 +972,8 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </div>
             )}
           </div>
+
+          <BlogEngagement articleId={activeArticle.id} title={activeArticle.title[lang] || activeArticle.title.pt} />
 
           {/* ============================================================== */}
           {/* RETENÇÃO SEO & INTERNAL LINKING: ARTIGOS RELACIONADOS          */}
