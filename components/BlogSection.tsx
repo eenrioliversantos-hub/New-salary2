@@ -164,13 +164,13 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
     <div className="space-y-8">
       {/* If an article is selected, display Enhanced Article Reader */}
       {activeArticle ? (
-        <article className="mx-auto max-w-5xl space-y-6 animate-in fade-in duration-200">
+        <article className="mx-auto max-w-4xl space-y-5 animate-in fade-in duration-200">
           {/* Back Navigation Bar */}
-          <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-transparent border border-slate-200/80">
             <button
               type="button"
               onClick={() => setActiveArticleId(null)}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold transition-colors cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 text-xs font-bold transition-colors cursor-pointer active:scale-95"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>
@@ -214,9 +214,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           </div>
 
           {/* Article Header & Strategic Metadata Strip */}
-          <div className="overflow-hidden bg-white rounded-[2rem] border border-slate-200 shadow-sm">
-            <div className="h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-950" aria-hidden="true" />
-            <div className="p-6 sm:p-10 space-y-7">
+          <div className="overflow-hidden bg-white rounded-[1.75rem] border border-slate-200 shadow-sm">
+            <div className="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-950" aria-hidden="true" />
+            <div className="p-5 sm:p-8 lg:p-10 space-y-6">
             {/* Category and Date row */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
@@ -227,7 +227,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             </div>
 
             {/* Target Audience & Communication Tone Badges */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
                   <Target className="w-4 h-4" />
@@ -269,7 +269,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </div>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            <h1 className="max-w-3xl text-3xl sm:text-4xl lg:text-[2.75rem] font-black text-slate-950 tracking-[-0.03em] leading-[1.08]">
               {activeArticle.title[lang] || activeArticle.title.pt}
             </h1>
 
@@ -302,9 +302,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             </div>
 
             {/* Article Content Paragraphs */}
-            <div className="prose prose-slate max-w-3xl text-sm sm:text-base text-slate-700 leading-8 space-y-5 pt-2">
+            <div className="prose prose-slate max-w-3xl text-[15px] sm:text-base text-slate-700 leading-[1.9] space-y-6 pt-2">
               {(activeArticle.content[lang] || activeArticle.content.pt || []).map((paragraph, idx) => (
-                <p key={idx} className="leading-relaxed">
+                <p key={idx} className="leading-[1.9] first-letter:text-3xl first-letter:font-black first-letter:text-blue-700">
                   {renderParagraphWithLinks(paragraph)}
                 </p>
               ))}
