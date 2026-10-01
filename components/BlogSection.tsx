@@ -213,6 +213,24 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             />
           </div>
 
+          {/* Post hero banner: visual context before the editorial header */}
+          <figure className="relative overflow-hidden rounded-[1.75rem] border border-slate-800 bg-slate-950 shadow-lg">
+            {activeArticle.media?.type === 'video' ? (
+              <video className="h-44 w-full object-cover sm:h-56" controls preload="metadata" poster={activeArticle.media.url}>
+                <source src={activeArticle.media.url} />
+              </video>
+            ) : activeArticle.media?.url ? (
+              <img src={activeArticle.media.url} alt={activeArticle.media.alt || activeArticle.title[lang] || activeArticle.title.pt} className="h-44 w-full object-cover sm:h-56" fetchPriority="high" />
+            ) : (
+              <div className="relative flex h-44 items-end overflow-hidden bg-gradient-to-br from-blue-700 via-indigo-900 to-slate-950 p-5 sm:h-56 sm:p-8">
+                <div className="absolute -right-12 -top-20 h-64 w-64 rounded-full border-[32px] border-white/10" aria-hidden="true" />
+                <div className="absolute right-10 bottom-8 h-20 w-20 rounded-2xl border border-white/15 rotate-12" aria-hidden="true" />
+                <div className="relative max-w-2xl"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">PaieNet · Guia prático</span><p className="mt-2 text-lg font-black text-white sm:text-2xl">{activeArticle.title[lang] || activeArticle.title.pt}</p></div>
+              </div>
+            )}
+            <figcaption className="bg-slate-950 px-4 py-2 text-[11px] text-slate-400">{activeArticle.media?.caption?.[lang] || activeArticle.media?.caption?.pt || (lang === 'pt' ? 'Contexto visual do artigo' : 'Article visual context')}</figcaption>
+          </figure>
+
           {/* Article Header & Strategic Metadata Strip */}
           <div className="overflow-hidden bg-white rounded-[1.75rem] border border-slate-200 shadow-sm">
             <div className="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-950" aria-hidden="true" />
@@ -277,18 +295,10 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               {activeArticle.excerpt[lang] || activeArticle.excerpt.pt}
             </p>
 
-            {activeArticle.media && (
-              <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
-                {activeArticle.media.type === 'video' ? (
-                  <video className="w-full aspect-video object-cover" controls preload="metadata" poster={activeArticle.media.url}>
-                    <source src={activeArticle.media.url} />
-                  </video>
-                ) : (
-                  <img src={activeArticle.media.url} alt={activeArticle.media.alt || activeArticle.title[lang] || activeArticle.title.pt} className="w-full max-h-[28rem] object-cover" loading="lazy" />
-                )}
-                {activeArticle.media.caption && <figcaption className="px-4 py-2.5 text-xs text-slate-300">{activeArticle.media.caption[lang] || activeArticle.media.caption.pt}</figcaption>}
-              </figure>
-            )}
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5" aria-label={lang === 'pt' ? 'Principais destaques do artigo' : 'Article highlights'}>
+              <div className="mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-600" /><h2 className="text-sm font-black text-slate-900">{lang === 'pt' ? 'O que você vai encontrar neste guia' : 'What you will find in this guide'}</h2></div>
+              <ul className="grid gap-2 sm:grid-cols-2">{(activeArticle.content[lang] || activeArticle.content.pt || []).slice(0, 4).map((item, index) => <li key={index} className="flex gap-2 text-xs leading-5 text-slate-700"><span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />{item.length > 130 ? `${item.slice(0, 127)}...` : item}</li>)}</ul>
+            </section>
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-y border-slate-100 py-3">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
@@ -330,7 +340,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             {/* MONETIZATION ZONE 2: CONTEXTUAL CALL-TO-ACTION (CTA TOOL)      */}
             {/* ============================================================== */}
             {activeArticle.ctaTool && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+              <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-5 mt-7">
                 <div className="space-y-1 text-center sm:text-left">
                   <span className="text-[11px] font-extrabold text-blue-700 uppercase tracking-wider block flex items-center gap-1.5 justify-center sm:justify-start">
                     <Sparkles className="w-3.5 h-3.5" />
