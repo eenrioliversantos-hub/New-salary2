@@ -377,17 +377,10 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                       </p>
                     </div>
 
-                    {/* View Full Stub Button */}
-                    <button
-                      type="button"
-                      onClick={() => setNetCalcView('results')}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                    >
-                      <span>
-                        {lang === 'pt' ? 'Ver Contracheque Completo' : lang === 'en' ? 'View Paystub' : 'Voir le talon complet'}
-                      </span>
-                      <ArrowRight className="w-4 h-4 text-blue-300" />
-                    </button>
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>{lang === 'pt' ? 'Atualização automática' : lang === 'en' ? 'Updates automatically' : 'Mise à jour automatique'}</span>
+                    </div>
                   </div>
 
                   {/* Clean Two-Column Workspace Layout */}
@@ -415,10 +408,6 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                       <WorkspaceQuickSummary
                         calc={calculation}
                         lang={lang}
-                        onViewFullStub={() => {
-                          setNetCalcView('results');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
                         onFrequencyChange={handleFrequencyChange}
                       />
                     </div>
@@ -876,30 +865,6 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
         onSelectTool={handleSelectTool}
         onOpenEbookModal={handleOpenEbookModal}
       />
-
-      {/* Mobile Sticky Quick Summary Bar */}
-      {activeTool === 'net-calc' && netCalcView === 'workspace' && (
-        <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-between gap-3">
-          <div className="text-left">
-            <span className="text-[10px] text-slate-500 block uppercase font-bold">Líquido Estimado</span>
-            <span className="text-sm font-extrabold text-emerald-600 tabular-nums">
-              {formatCurrency(calculation.selectedPeriod.net, locale)}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setNetCalcView('results');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="flex-1 py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            <span>Ver Contracheque</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
 
       {/* Floating Toast Notification */}
       {(copied || toastMessage) && (
