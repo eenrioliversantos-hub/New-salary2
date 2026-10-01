@@ -306,7 +306,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/70 text-slate-900 font-sans selection:bg-blue-500/20 selection:text-blue-950 pb-20 sm:pb-12 overflow-x-clip w-full max-w-full">
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/20 selection:text-foreground pb-20 sm:pb-12 overflow-x-clip w-full max-w-full">
       {/* 1. Header with Centralized Tools Menu, Language and Pro Pass */}
       <Header
         lang={lang}

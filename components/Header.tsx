@@ -521,7 +521,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/90 transition-all shadow-xs"
+      className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-xl border-b border-border/80 transition-all shadow-sm supports-[backdrop-filter]:bg-card/80"
       ref={navRef}
     >
       {/* Rotative Top Ticker Banner */}
