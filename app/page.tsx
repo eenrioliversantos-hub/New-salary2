@@ -390,7 +390,6 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                         input={input}
                         onChange={setInput}
                         onLoadLeclercExample={handleLoadLeclercExample}
-                        onCalculate={() => setNetCalcView('results')}
                         lang={lang}
                       />
 
@@ -401,6 +400,18 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                           onFrequencyChange={handleFrequencyChange}
                         />
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setNetCalcView('results')}
+                        className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 text-white rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.99]"
+                      >
+                        <Calculator className="w-5 h-5 text-blue-200 group-hover:scale-105 transition-transform" />
+                        <span>
+                          {lang === 'pt' ? 'Ver Detalhamento Completo do Salário' : lang === 'en' ? 'View Full Paystub Breakdown' : 'Voir le relevé de paie complet'}
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-blue-200 group-hover:translate-x-1 transition-transform" />
+                      </button>
 
                       <PrecisionCard
                         precision={calculation.precision}
