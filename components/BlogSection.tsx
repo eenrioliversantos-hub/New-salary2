@@ -258,6 +258,19 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               {activeArticle.excerpt[lang] || activeArticle.excerpt.pt}
             </p>
 
+            {activeArticle.media && (
+              <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+                {activeArticle.media.type === 'video' ? (
+                  <video className="w-full aspect-video object-cover" controls preload="metadata" poster={activeArticle.media.url}>
+                    <source src={activeArticle.media.url} />
+                  </video>
+                ) : (
+                  <img src={activeArticle.media.url} alt={activeArticle.media.alt || activeArticle.title[lang] || activeArticle.title.pt} className="w-full max-h-[28rem] object-cover" loading="lazy" />
+                )}
+                {activeArticle.media.caption && <figcaption className="px-4 py-2.5 text-xs text-slate-300">{activeArticle.media.caption[lang] || activeArticle.media.caption.pt}</figcaption>}
+              </figure>
+            )}
+
             {/* Article Content Paragraphs */}
             <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-800 leading-relaxed space-y-4 pt-2">
               {(activeArticle.content[lang] || activeArticle.content.pt || []).map((paragraph, idx) => (

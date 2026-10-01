@@ -952,6 +952,19 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
+              {/* Acesso editorial direto: Blog */}
+              <button
+                type="button"
+                onClick={() => handleNavClick('blog')}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer ${
+                  activeTool === 'blog' ? 'text-blue-700 bg-blue-50/80' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                }`}
+                aria-current={activeTool === 'blog' ? 'page' : undefined}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>{lang === 'pt' ? 'Blog' : lang === 'en' ? 'Blog' : 'Blogue'}</span>
+              </button>
+
               {/* Dropdown 3: Conteúdo & Guias */}
               <div
                 className="relative"
@@ -1559,15 +1572,27 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* Mobile Section 3: B2B, Blog & Mapa do Site */}
-            <div className="space-y-1 pt-2 border-t border-slate-100">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 block">
-                {HEADER_I18N.mobile.resources[lang]}
-              </span>
+  {/* Mobile Section 3: B2B, Blog & Mapa do Site */}
+  <div className="space-y-1 pt-2 border-t border-slate-100">
+    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 block">
+      {HEADER_I18N.mobile.resources[lang]}
+    </span>
 
-              <button
-                type="button"
-                onClick={() => handleNavClick('resources')}
+  <button
+    type="button"
+    onClick={() => handleNavClick('blog')}
+    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-bold ${activeTool === 'blog' ? 'bg-blue-50 text-blue-700' : 'text-slate-800 hover:bg-slate-50'}`}
+  >
+    <div className="flex items-center gap-2.5">
+      <BookOpen className="w-4 h-4 text-blue-600" />
+      <span>{lang === 'pt' ? 'Blog profissional' : lang === 'en' ? 'Professional blog' : 'Blogue professionnel'}</span>
+    </div>
+    <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+  </button>
+  
+  <button
+    type="button"
+    onClick={() => handleNavClick('resources')}
                 className="w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold text-emerald-900 bg-emerald-50/70 hover:bg-emerald-50"
               >
                 <div className="flex items-center gap-2.5">
