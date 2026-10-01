@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({
   const activeAffiliates = affiliates.filter((a) => a.active);
 
   return (
-    <footer className="mt-12 border-t border-slate-200/90 bg-white pt-6 pb-12 text-slate-500 text-xs">
+    <footer className="mt-16 border-t border-border/80 bg-card pt-8 pb-14 text-muted-foreground text-xs">
       {/* Footer Ad Banner Placement */}
       <AdBanner section="footer-wide" format="bottom-wide" label={t.adBannerLabel} />
 

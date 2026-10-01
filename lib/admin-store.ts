@@ -20,6 +20,12 @@ export interface BlogArticleData {
   title: Record<Language, string>;
   excerpt: Record<Language, string>;
   content: Record<Language, string[]>;
+  media?: {
+    type: 'image' | 'video';
+    url: string;
+    alt?: string;
+    caption?: Record<Language, string>;
+  };
   ctaTool?: ToolId;
   ctaToolLabel: Record<Language, string>;
   searchIntent?: SearchIntent;

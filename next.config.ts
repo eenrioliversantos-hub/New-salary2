@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
   },
   output: 'standalone',
   transpilePackages: ['motion'],
+  // Keep Next's built-in CSS extraction plugin intact for the dev and production pipelines.
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
     // Do not modify - file watching is disabled to prevent flickering during agent edits.

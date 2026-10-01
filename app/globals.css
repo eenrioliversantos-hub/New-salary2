@@ -1,6 +1,86 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@theme inline {
+  --font-sans: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+}
+
+:root {
+  /* PaieNet design system: calm surfaces, confident ink, one useful accent. */
+  --font-ui: "Inter", "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --background: #f7f9fc;
+  --foreground: #172033;
+  --card: #ffffff;
+  --card-foreground: #172033;
+  --muted: #eef2f7;
+  --muted-foreground: #64748b;
+  --border: #dfe6ef;
+  --input: #cbd5e1;
+  --primary: #155eef;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef8;
+  --secondary-foreground: #243b63;
+  --accent: #e8f0ff;
+  --accent-foreground: #1244a8;
+  --success: #087f5b;
+  --warning: #b54708;
+  --radius: 0.75rem;
+}
+
+* { border-color: var(--border); }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+button, a { -webkit-tap-highlight-color: transparent; }
+
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
+/* Shared page primitives: use these instead of one-off widths and spacing. */
+.page-shell { width: min(100% - 2rem, 80rem); margin-inline: auto; }
+.section-space { padding-block: clamp(3rem, 7vw, 6rem); }
+.content-measure { max-width: 46rem; }
+.eyebrow { color: var(--primary); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.display-title { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 4rem); font-weight: 750; letter-spacing: -0.045em; line-height: 1.05; }
+.section-title { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; }
+
+@media (min-width: 768px) {
+  .page-shell { width: min(100% - 4rem, 80rem); }
+}
+
+@media (min-width: 1280px) {
+  .page-shell { width: min(100% - 6rem, 84rem); }
+}
+
 /* Custom refined scrollbar for tool ribbons and horizontal navigation */
 .custom-scrollbar {
   scrollbar-width: thin;

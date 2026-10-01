@@ -5,26 +5,19 @@ import { CalculationResult, formatCurrency, PayFrequency } from '@/lib/tax-engin
 import { Language, translations } from '@/lib/i18n';
 import {
   Wallet,
-  ArrowRight,
   TrendingDown,
-  ShieldCheck,
   CheckCircle2,
-  FileText,
-  Clock,
-  Sparkles,
 } from 'lucide-react';
 
 interface WorkspaceQuickSummaryProps {
   calc: CalculationResult;
   lang: Language;
-  onViewFullStub: () => void;
   onFrequencyChange: (freq: PayFrequency) => void;
 }
 
 export const WorkspaceQuickSummary: React.FC<WorkspaceQuickSummaryProps> = ({
   calc,
   lang,
-  onViewFullStub,
   onFrequencyChange,
 }) => {
   const t = translations[lang];
@@ -39,7 +32,7 @@ export const WorkspaceQuickSummary: React.FC<WorkspaceQuickSummaryProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 flex flex-col justify-between space-y-5 sticky top-20">
+    <div className="bg-slate-50/70 rounded-2xl border border-slate-200/90 p-4 sm:p-5 flex flex-col justify-between space-y-5">
       {/* Top Header */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -125,16 +118,6 @@ export const WorkspaceQuickSummary: React.FC<WorkspaceQuickSummaryProps> = ({
         </div>
       </div>
 
-      {/* Button to View Full Stub & Details */}
-      <button
-        type="button"
-        onClick={onViewFullStub}
-        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95 group"
-      >
-        <FileText className="w-4 h-4 text-blue-200" />
-        <span>{lang === 'pt' ? 'Ver Contracheque Completo' : lang === 'en' ? 'View Full Paystub' : 'Voir le talon de paie complet'}</span>
-        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-      </button>
     </div>
   );
 };

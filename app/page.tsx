@@ -306,7 +306,7 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/70 text-slate-900 font-sans selection:bg-blue-500/20 selection:text-blue-950 pb-20 sm:pb-12 overflow-x-clip w-full max-w-full">
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/20 selection:text-foreground pb-20 sm:pb-12 overflow-x-clip w-full max-w-full">
       {/* 1. Header with Centralized Tools Menu, Language and Pro Pass */}
       <Header
         lang={lang}
@@ -377,52 +377,49 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                       </p>
                     </div>
 
-                    {/* View Full Stub Button */}
-                    <button
-                      type="button"
-                      onClick={() => setNetCalcView('results')}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                    >
-                      <span>
-                        {lang === 'pt' ? 'Ver Contracheque Completo' : lang === 'en' ? 'View Paystub' : 'Voir le talon complet'}
-                      </span>
-                      <ArrowRight className="w-4 h-4 text-blue-300" />
-                    </button>
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>{lang === 'pt' ? 'Atualização automática' : lang === 'en' ? 'Updates automatically' : 'Mise à jour automatique'}</span>
+                    </div>
                   </div>
 
-                  {/* Clean Two-Column Workspace Layout */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    {/* Left: Input Controls (7 cols on desktop) */}
-                    <div className="lg:col-span-7 space-y-6">
+                  {/* Unified calculator section: inputs first, live preview immediately below */}
+                  <section className="bg-white rounded-3xl border border-slate-200 shadow-xs p-3 sm:p-5 lg:p-6 space-y-5" aria-label={lang === 'pt' ? 'Calculadora de salário líquido' : lang === 'en' ? 'Net salary calculator' : 'Calculateur de salaire net'}>
+                    <div className="space-y-5">
                       <SalaryInputs
                         input={input}
                         onChange={setInput}
                         onLoadLeclercExample={handleLoadLeclercExample}
-                        onCalculate={() => setNetCalcView('results')}
                         lang={lang}
                       />
 
-                      {/* Precision Card directly under inputs */}
+                      <div className="border-t border-slate-100 pt-5">
+                        <WorkspaceQuickSummary
+                          calc={calculation}
+                          lang={lang}
+                          onFrequencyChange={handleFrequencyChange}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setNetCalcView('results')}
+                        className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 text-white rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.99]"
+                      >
+                        <Calculator className="w-5 h-5 text-blue-200 group-hover:scale-105 transition-transform" />
+                        <span>
+                          {lang === 'pt' ? 'Ver Detalhamento Completo do Salário' : lang === 'en' ? 'View Full Paystub Breakdown' : 'Voir le relevé de paie complet'}
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-blue-200 group-hover:translate-x-1 transition-transform" />
+                      </button>
+
                       <PrecisionCard
                         precision={calculation.precision}
                         lang={lang}
                         onOpenScenariosModal={() => handleSelectTool('scenarios')}
                       />
                     </div>
-
-                    {/* Right: Live Summary Companion Widget (5 cols on desktop) */}
-                    <div className="lg:col-span-5 space-y-6">
-                      <WorkspaceQuickSummary
-                        calc={calculation}
-                        lang={lang}
-                        onViewFullStub={() => {
-                          setNetCalcView('results');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        onFrequencyChange={handleFrequencyChange}
-                      />
-                    </div>
-                  </div>
+                  </section>
                 </div>
               ) : (
                 /* CONTRACHEQUE COMPLETO & TABELA MÁGICA EM CASCATA */
@@ -876,30 +873,6 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
         onSelectTool={handleSelectTool}
         onOpenEbookModal={handleOpenEbookModal}
       />
-
-      {/* Mobile Sticky Quick Summary Bar */}
-      {activeTool === 'net-calc' && netCalcView === 'workspace' && (
-        <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg flex items-center justify-between gap-3">
-          <div className="text-left">
-            <span className="text-[10px] text-slate-500 block uppercase font-bold">Líquido Estimado</span>
-            <span className="text-sm font-extrabold text-emerald-600 tabular-nums">
-              {formatCurrency(calculation.selectedPeriod.net, locale)}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setNetCalcView('results');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="flex-1 py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            <span>Ver Contracheque</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
 
       {/* Floating Toast Notification */}
       {(copied || toastMessage) && (

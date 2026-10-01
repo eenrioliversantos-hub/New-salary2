@@ -85,7 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-900 overflow-x-clip w-full max-w-full" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col font-sans selection:bg-primary/20 selection:text-primary overflow-x-clip w-full max-w-full" suppressHydrationWarning>
         {children}
       </body>
     </html>
