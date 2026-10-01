@@ -32,7 +32,7 @@ export const WorkspaceQuickSummary: React.FC<WorkspaceQuickSummaryProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 flex flex-col justify-between space-y-5 sticky top-20">
+    <div className="bg-slate-50/70 rounded-2xl border border-slate-200/90 p-4 sm:p-5 flex flex-col justify-between space-y-5">
       {/* Top Header */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">

@@ -383,10 +383,9 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                     </div>
                   </div>
 
-                  {/* Clean Two-Column Workspace Layout */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    {/* Left: Input Controls (7 cols on desktop) */}
-                    <div className="lg:col-span-7 space-y-6">
+                  {/* Unified calculator section: inputs first, live preview immediately below */}
+                  <section className="bg-white rounded-3xl border border-slate-200 shadow-xs p-3 sm:p-5 lg:p-6 space-y-5" aria-label={lang === 'pt' ? 'Calculadora de salário líquido' : lang === 'en' ? 'Net salary calculator' : 'Calculateur de salaire net'}>
+                    <div className="space-y-5">
                       <SalaryInputs
                         input={input}
                         onChange={setInput}
@@ -395,23 +394,21 @@ Calculado no PaieNet Québec (Barèmes 2025/2026)`;
                         lang={lang}
                       />
 
-                      {/* Precision Card directly under inputs */}
+                      <div className="border-t border-slate-100 pt-5">
+                        <WorkspaceQuickSummary
+                          calc={calculation}
+                          lang={lang}
+                          onFrequencyChange={handleFrequencyChange}
+                        />
+                      </div>
+
                       <PrecisionCard
                         precision={calculation.precision}
                         lang={lang}
                         onOpenScenariosModal={() => handleSelectTool('scenarios')}
                       />
                     </div>
-
-                    {/* Right: Live Summary Companion Widget (5 cols on desktop) */}
-                    <div className="lg:col-span-5 space-y-6">
-                      <WorkspaceQuickSummary
-                        calc={calculation}
-                        lang={lang}
-                        onFrequencyChange={handleFrequencyChange}
-                      />
-                    </div>
-                  </div>
+                  </section>
                 </div>
               ) : (
                 /* CONTRACHEQUE COMPLETO & TABELA MÁGICA EM CASCATA */
