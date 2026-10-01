@@ -147,7 +147,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
     <div className="space-y-8">
       {/* If an article is selected, display Enhanced Article Reader */}
       {activeArticle ? (
-        <article className="space-y-6 animate-in fade-in duration-200">
+        <article className="mx-auto max-w-5xl space-y-6 animate-in fade-in duration-200">
           {/* Back Navigation Bar */}
           <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
             <button
@@ -197,7 +197,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           </div>
 
           {/* Article Header & Strategic Metadata Strip */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+          <div className="bg-white p-6 sm:p-10 rounded-[2rem] border border-slate-200 shadow-sm space-y-7">
             {/* Category and Date row */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
@@ -272,7 +272,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             )}
 
             {/* Article Content Paragraphs */}
-            <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-800 leading-relaxed space-y-4 pt-2">
+            <div className="prose prose-slate max-w-3xl text-sm sm:text-base text-slate-700 leading-8 space-y-5 pt-2">
               {(activeArticle.content[lang] || activeArticle.content.pt || []).map((paragraph, idx) => (
                 <p key={idx} className="leading-relaxed">
                   {renderParagraphWithLinks(paragraph)}
@@ -585,33 +585,34 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
         /* ============================================================== */
         /* BLOG INDEX / SHOWCASE VIEW                                     */
         /* ============================================================== */
-        <div className="space-y-6">
-          {/* Header Banner */}
-          <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+        <div className="mx-auto max-w-6xl space-y-8">
+          {/* Editorial masthead */}
+          <header className="relative overflow-hidden bg-slate-950 p-6 sm:p-9 rounded-[2rem] border border-slate-800 shadow-lg space-y-7">
+            <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" aria-hidden="true" />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 shadow-xs">
+              <div className="relative flex items-start gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/30 text-blue-300 flex items-center justify-center shrink-0">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200 mb-1.5">
                     <Sparkles className="w-3 h-3 text-blue-600" />
-                    <span>
+                    <span className="text-blue-300">
                       {lang === 'pt'
-                        ? 'Blog & Guias Práticos do Québec 2026'
+                        ? 'Central editorial PaieNet · Québec 2026'
                         : lang === 'en'
                         ? 'Quebec Practical Guides & Blog 2026'
                         : 'Blog & Guides Pratiques 2026'}
                     </span>
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight max-w-3xl">
                     {lang === 'pt'
                       ? 'Tudo sobre Salário, Impostos, Leis e Carreira no Québec'
                       : lang === 'en'
                       ? 'Everything About Payroll, Taxes & Career in Quebec'
                       : 'Tout comprendre sur la paie, les impôts et l’emploi au Québec'}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                  <p className="text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed">
                     {lang === 'pt'
                       ? 'Artigos práticos explicando cada desconto do holerite, normas da CNESST, formato canadense de currículo, remessas e soluções mapeadas para a sua necessidade.'
                       : lang === 'en'
@@ -625,7 +626,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               <button
                 type="button"
                 onClick={onOpenEbookModal}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs sm:text-sm shadow-sm transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 self-start md:self-center"
+                className="relative inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-950 font-black text-xs sm:text-sm shadow-sm transition-all cursor-pointer whitespace-nowrap active:scale-95 shrink-0 self-start md:self-center hover:bg-blue-50"
               >
                 <BookOpen className="w-4 h-4" />
                 <span>{lang === 'pt' ? 'E-book Oficial (140p)' : lang === 'en' ? 'Official Guide (140p)' : 'Guide E-book (140p)'}</span>
@@ -675,7 +676,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                 ))}
               </div>
             </div>
-          </div>
+          </header>
 
           {/* Mapped Blog Showcase Ad Banner with Prominent "Espaço de Publicidade" */}
           <div id="blog-showcase" className="mb-4">
@@ -687,9 +688,41 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             />
           </div>
 
+          {/* Featured article + editorial grid */}
+          {filteredArticles.length > 0 && (
+            <button
+              type="button"
+              onClick={() => handleOpenArticle(filteredArticles[0])}
+              className="group w-full text-left overflow-hidden rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer grid lg:grid-cols-[1.15fr_0.85fr]"
+            >
+              <div className="min-h-56 lg:min-h-72 bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-950 p-6 sm:p-9 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute -right-12 -bottom-16 w-56 h-56 rounded-full border-[28px] border-white/10" aria-hidden="true" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <span className="inline-flex rounded-full bg-white/15 border border-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-100">{lang === 'pt' ? 'Leitura em destaque' : 'Featured reading'}</span>
+                  <span className="text-xs text-blue-100 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{filteredArticles[0].readTime}</span>
+                </div>
+                <div className="relative mt-10">
+                  <p className="text-xs font-bold text-blue-200 mb-2">{categories.find((c) => c.id === filteredArticles[0].category)?.label || 'Guia'}</p>
+                  <h3 className="text-2xl sm:text-3xl font-black leading-tight text-white group-hover:text-blue-100 transition-colors">{filteredArticles[0].title[lang] || filteredArticles[0].title.pt}</h3>
+                </div>
+              </div>
+              <div className="p-6 sm:p-9 flex flex-col justify-between gap-6">
+                <div>
+                  <p className="text-sm leading-7 text-slate-600 line-clamp-5">{filteredArticles[0].excerpt[lang] || filteredArticles[0].excerpt.pt}</p>
+                </div>
+                <span className="inline-flex items-center gap-2 text-sm font-black text-blue-700">{lang === 'pt' ? 'Ler artigo completo' : 'Read full article'}<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></span>
+              </div>
+            </button>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <h3 className="text-lg font-black text-slate-900">{lang === 'pt' ? 'Explore todos os artigos' : 'Explore all articles'}</h3>
+            <span className="text-xs font-bold text-slate-400">{filteredArticles.length} {lang === 'pt' ? 'publicações' : 'posts'}</span>
+          </div>
+
           {/* Articles Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {filteredArticles.map((art) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {filteredArticles.slice(1).map((art) => (
               <div
                 key={art.id}
                 onClick={() => handleOpenArticle(art)}
